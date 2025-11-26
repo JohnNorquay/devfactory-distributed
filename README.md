@@ -114,7 +114,17 @@ Your Laptop (tmux sessions)
 - Claude Code CLI (`claude`)
 - GitHub repository
 - Anthropic API key (for orchestrator)
-- SendGrid account (for notifications)
+
+## Notifications
+
+DevFactory uses **GitHub Issues** for notifications - no email setup required!
+
+You'll see issues created for:
+- ❓ **Need Your Input** - When Claude Strategist can't resolve something
+- ✅ **Progress Update** - When a batch of tasks is merged  
+- 🎉 **Project Complete** - When everything is done
+
+Just watch your GitHub notifications!
 
 ## Integration with DevFactory v3.0
 
