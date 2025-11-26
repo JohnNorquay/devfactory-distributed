@@ -35,36 +35,49 @@ export async function startCommand(options: StartOptions) {
   console.log('The system is now active. The GitHub orchestrator');
   console.log('will process completed tasks automatically.');
   console.log('');
+  console.log('━━━ 4-Stage Pipeline Architecture ━━━\n');
+  console.log('  DB Worker → Backend Worker → Frontend Worker → Testing Worker');
+  console.log('  (schemas)    (APIs)          (UI)              (E2E)');
+  console.log('');
   console.log('━━━ Start Your Workers ━━━\n');
   
-  const numWorkers = parseInt(options.workers || '3');
-  const profiles = ['backend', 'frontend', 'testing'];
+  const pipelineWorkers = [
+    { session: 'session-1', name: 'database', desc: 'DB migrations & schemas' },
+    { session: 'session-2', name: 'backend', desc: 'APIs & services' },
+    { session: 'session-3', name: 'frontend', desc: 'UI components & pages' },
+    { session: 'session-4', name: 'testing', desc: 'E2E & integration tests' },
+  ];
   
-  for (let i = 1; i <= numWorkers; i++) {
-    const profile = profiles[(i - 1) % profiles.length];
-    console.log(`Terminal ${i}:`);
-    console.log(`  tmux new-session -d -s session-${i}`);
-    console.log(`  tmux send-keys -t session-${i} 'cd ${cwd} && claude' Enter`);
-    console.log(`  tmux attach -t session-${i}`);
-    console.log(`  # Then paste: devfactory bootstrap session-${i}`);
+  for (const worker of pipelineWorkers) {
+    console.log(`${worker.name.toUpperCase()} (${worker.desc}):`);
+    console.log(`  tmux new-session -d -s ${worker.name} -c ${cwd}`);
+    console.log(`  tmux attach -t ${worker.name}`);
+    console.log(`  # Then: claude → paste: devfactory bootstrap ${worker.session}`);
     console.log('');
   }
   
-  console.log('━━━ Quick Start ━━━\n');
-  console.log('# Run this to start all 3 workers:');
-  console.log('');
+  console.log('━━━ Quick Start (copy/paste) ━━━\n');
+  console.log(`# Create all 4 pipeline workers:`);
+  console.log(`tmux new-session -d -s database -c ${cwd}`);
   console.log(`tmux new-session -d -s backend -c ${cwd}`);
   console.log(`tmux new-session -d -s frontend -c ${cwd}`);
   console.log(`tmux new-session -d -s testing -c ${cwd}`);
   console.log('');
-  console.log('# Then attach and start claude in each:');
-  console.log('tmux attach -t backend  # type: claude, paste bootstrap');
+  console.log('# Attach and bootstrap each:');
+  console.log('tmux attach -t database  # → claude → devfactory bootstrap session-1');
+  console.log('');
+  console.log('━━━ Pipeline Flow ━━━\n');
+  console.log('  Spec N DB done → unlocks Spec N for Backend');
+  console.log('  Spec N API done → unlocks Spec N for Frontend');
+  console.log('  Spec N UI done → unlocks Spec N for Testing');
+  console.log('');
+  console.log('  All 4 workers stay busy once pipeline fills! 🚀');
   console.log('');
   console.log('━━━ Monitoring ━━━\n');
   console.log('  devfactory status   - Check progress');
   console.log('  devfactory stuck    - See stuck tasks');
   console.log('  devfactory stop     - Pause execution');
   console.log('');
-  console.log('📧 You\'ll receive emails when waves complete or if help is needed.');
+  console.log('📣 GitHub Issues will notify you of progress and completion.');
   console.log('');
 }
