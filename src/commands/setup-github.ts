@@ -20,14 +20,14 @@ export async function setupGithubCommand() {
   
   console.log('\n✅ GitHub orchestrator installed!\n');
   console.log('Required GitHub Secrets:');
-  console.log('  • ANTHROPIC_API_KEY - Your Anthropic API key');
-  console.log('  • SENDGRID_API_KEY  - For email notifications');
-  console.log('  • NOTIFY_EMAIL      - Where to send notifications\n');
-  console.log('Add these at: https://github.com/[owner]/[repo]/settings/secrets/actions\n');
+  console.log('  • ANTHROPIC_API_KEY - Your Anthropic API key\n');
+  console.log('Notifications will appear as GitHub Issues - no email setup needed! 🎉\n');
+  console.log('Add the secret at: https://github.com/[owner]/[repo]/settings/secrets/actions\n');
 }
 
 const ORCHESTRATOR_WORKFLOW = `# DevFactory Distributed Orchestrator v3.1
 # Autonomous review, merge, and intelligent escalation
+# Notifications via GitHub Issues (no SendGrid needed!)
 
 name: DevFactory Orchestrator
 
@@ -242,46 +242,101 @@ jobs:
             echo "project_complete=false" >> $GITHUB_OUTPUT
           fi
           
-          [ -n "\${{ steps.process.outputs.need_human }}" ] && echo "has_human_needs=true" >> $GITHUB_OUTPUT || echo "has_human_needs=false" >> $GITHUB_OUTPUT
+          if [ -n "\${{ steps.process.outputs.need_human }}" ] && [ "\${{ steps.process.outputs.need_human }}" != "" ]; then
+            echo "has_human_needs=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_human_needs=false" >> $GITHUB_OUTPUT
+          fi
           
-      - name: Notify - Human Needed
+      - name: Create Issue - Human Needed
         if: steps.completion.outputs.has_human_needs == 'true'
-        uses: dawidd6/action-send-mail@v3
+        uses: actions/github-script@v7
         with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: \${{ secrets.SENDGRID_API_KEY }}
-          subject: "❓ DevFactory: Need Your Input"
-          to: \${{ secrets.NOTIFY_EMAIL }}
-          from: DevFactory <devfactory@automated.local>
-          body: |
-            DevFactory needs your input.
+          script: |
+            const needHuman = \`\${{ steps.process.outputs.need_human }}\`;
             
-            Claude reviewed these and determined they need human action:
-            \${{ steps.process.outputs.need_human }}
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '❓ DevFactory: Need Your Input',
+              body: \`## DevFactory needs your input
             
-            Everything else continues in parallel.
+            Claude Strategist reviewed stuck tasks and determined these need human action:
             
-      - name: Notify - Project Complete
+            \${needHuman}
+            
+            ---
+            
+            **What to do:**
+            1. Check the task details in \\\`.devfactory/tasks/\\\`
+            2. Provide what's needed (credentials, decision, clarification)
+            3. Close this issue when resolved
+            
+            Everything else continues in parallel! 🚀
+            \`,
+              labels: ['devfactory', 'needs-human']
+            });
+            
+      - name: Create Issue - Project Complete
         if: steps.completion.outputs.project_complete == 'true'
-        uses: dawidd6/action-send-mail@v3
+        uses: actions/github-script@v7
         with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: \${{ secrets.SENDGRID_API_KEY }}
-          subject: "🎉 DevFactory: Project Complete!"
-          to: \${{ secrets.NOTIFY_EMAIL }}
-          from: DevFactory <devfactory@automated.local>
-          body: |
-            🎉 Your project is complete!
+          script: |
+            const merged = '\${{ steps.process.outputs.merged }}';
+            const skipped = '\${{ steps.process.outputs.skipped }}';
+            const interventions = \`\${{ steps.process.outputs.interventions }}\`;
             
-            Tasks merged: \${{ steps.process.outputs.merged }}
-            Tasks skipped: \${{ steps.process.outputs.skipped }}
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🎉 DevFactory: Project Complete!',
+              body: \`## Your project is complete!
             
-            Claude Interventions:
-            \${{ steps.process.outputs.interventions }}
+            ### Summary
+            - **Tasks Merged:** \${merged}
+            - **Tasks Skipped:** \${skipped}
             
-            Your code is ready on main!
+            ### Claude Interventions
+            \${interventions || 'None needed - smooth sailing! 🌊'}
+            
+            ---
+            
+            Your code is ready on \\\`main\\\`! 🚀
+            
+            Run \\\`devfactory status\\\` for full details.
+            \`,
+              labels: ['devfactory', 'complete']
+            });
+            
+      - name: Create Issue - Wave Complete
+        if: steps.check.outputs.running == 'true' && steps.process.outputs.merged != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const merged = '\${{ steps.process.outputs.merged }}';
+            const skipped = '\${{ steps.process.outputs.skipped }}';
+            const interventions = \`\${{ steps.process.outputs.interventions }}\`;
+            
+            // Only create wave update if significant progress
+            if (parseInt(merged) < 3) return;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '✅ DevFactory: Progress Update',
+              body: \`## Progress Update
+            
+            ### This Cycle
+            - **Tasks Merged:** \${merged}
+            - **Tasks Skipped:** \${skipped}
+            
+            ### Claude Interventions
+            \${interventions || 'None - everything auto-approved! ✨'}
+            
+            ---
+            
+            Work continues... Run \\\`devfactory status\\\` for current state.
+            \`,
+              labels: ['devfactory', 'progress']
+            });
 `;
