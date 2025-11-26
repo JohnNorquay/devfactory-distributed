@@ -1,13 +1,13 @@
 # DevFactory Distributed v3.1
 
-Autonomous parallel development system for DevFactory.
+Autonomous parallel development system for DevFactory using a 4-stage pipeline architecture.
 
 ## Quick Install
 
 ```bash
 # Clone or copy to your plugins
 cd ~/.claude/plugins
-git clone [this-repo] devfactory-distributed
+git clone https://github.com/JohnNorquay/devfactory-distributed.git
 
 # Install
 cd devfactory-distributed
@@ -21,8 +21,8 @@ npm link  # Makes 'devfactory' command available globally
 ### Initialize in Your Project
 
 ```bash
-cd ~/projects/farmpayroll  # Your project
-devfactory init --name "FarmPayroll" --email "your@email.com"
+cd ~/projects/your-project
+devfactory init --name "YourProject"
 ```
 
 ### Setup GitHub Orchestrator
@@ -31,10 +31,8 @@ devfactory init --name "FarmPayroll" --email "your@email.com"
 devfactory setup-github
 ```
 
-Then add these secrets to your GitHub repo:
+Then add this secret to your GitHub repo:
 - `ANTHROPIC_API_KEY` - Your Anthropic API key
-- `SENDGRID_API_KEY` - For email notifications  
-- `NOTIFY_EMAIL` - Where to send notifications
 
 ### Start Workers
 
@@ -42,15 +40,17 @@ Then add these secrets to your GitHub repo:
 # Start the system
 devfactory start
 
-# Open 3 terminals and start Claude Code in each:
+# Create all 4 pipeline workers:
+tmux new-session -d -s database
 tmux new-session -d -s backend
 tmux new-session -d -s frontend
 tmux new-session -d -s testing
 
-# Get bootstrap prompt for each
-devfactory bootstrap session-1  # Copy and paste into backend session
-devfactory bootstrap session-2  # Copy and paste into frontend session
-devfactory bootstrap session-3  # Copy and paste into testing session
+# Bootstrap each (attach, run claude, paste bootstrap prompt):
+devfactory bootstrap session-1  # Database worker
+devfactory bootstrap session-2  # Backend worker
+devfactory bootstrap session-3  # Frontend worker
+devfactory bootstrap session-4  # Testing worker
 ```
 
 ### Monitor Progress
@@ -61,13 +61,71 @@ devfactory stuck       # See what needs help
 devfactory stop        # Pause execution
 ```
 
+## 4-Stage Pipeline Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  YOUR LAPTOP (4 tmux sessions)                                           │
+│                                                                          │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐          │
+│  │ database │ →  │ backend  │ →  │ frontend │ →  │ testing  │          │
+│  │ worker   │    │ worker   │    │ worker   │    │ worker   │          │
+│  ├──────────┤    ├──────────┤    ├──────────┤    ├──────────┤          │
+│  │migrations│    │   APIs   │    │   UI     │    │   E2E    │          │
+│  │ schemas  │    │ services │    │  pages   │    │  tests   │          │
+│  │   RLS    │    │  routes  │    │  forms   │    │  specs   │          │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘          │
+│       │               │               │               │                 │
+│       └───────────────┴───────────────┴───────────────┘                 │
+│                               │                                          │
+│                          git push                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+                     ┌──────────────────┐
+                     │ GitHub Actions   │
+                     │ Orchestrator     │
+                     │                  │
+                     │ • Reviews code   │
+                     │ • Auto-merges    │
+                     │ • Claude Strat.  │
+                     │ • GitHub Issues  │
+                     └──────────────────┘
+```
+
+### Pipeline Flow (5 specs example)
+
+```
+TIME →     T1    T2    T3    T4    T5    T6    T7    T8
+           ─────────────────────────────────────────────
+DB         [S1]  [S2]  [S3]  [S4]  [S5]  done   ·     ·
+Backend     ·    [S1]  [S2]  [S3]  [S4]  [S5]  done   ·
+Frontend    ·     ·    [S1]  [S2]  [S3]  [S4]  [S5]  done
+Testing     ·     ·     ·    [S1]  [S2]  [S3]  [S4]  [S5]
+           ─────────────────────────────────────────────
+                 └─── ALL 4 WORKERS BUSY ───┘
+
+[S1] = Spec 1's tasks for that layer
+```
+
+**After initial ramp-up (T4), all 4 workers run at 100% utilization!**
+
+### Why Pipeline?
+
+| Approach | Workers Busy | Efficiency |
+|----------|--------------|------------|
+| Sequential (v3.0) | 1 of 1 | 100% but slow |
+| Wave-based (3 workers) | Often waiting | ~60% |
+| **Pipeline (4 workers)** | **All 4 continuously** | **~95%** |
+
 ## How It Works
 
-1. **Workers** (Claude Code sessions) run in tmux
-2. **Workers** claim tasks, code, and commit to Git
-3. **Orchestrator** (GitHub Action) reviews and merges
-4. **Claude Strategist** handles stuck tasks intelligently
-5. **You** get emails only when waves complete or help is needed
+1. **DB Worker** completes Spec N migrations → unlocks Spec N for Backend
+2. **Backend Worker** completes Spec N APIs → unlocks Spec N for Frontend
+3. **Frontend Worker** completes Spec N UI → unlocks Spec N for Testing
+4. **Testing Worker** validates Spec N → marks complete
+5. **Orchestrator** reviews, merges, handles issues automatically
+6. **You** watch GitHub Issues, sip coffee ☕
 
 ## Commands
 
@@ -81,30 +139,14 @@ devfactory stop        # Pause execution
 | `devfactory stop` | Pause execution |
 | `devfactory stuck` | Show stuck tasks |
 
-## Architecture
-
-```
-Your Laptop (tmux sessions)
-├── session-1 (backend)  → claude CLI
-├── session-2 (frontend) → claude CLI
-└── session-3 (testing)  → claude CLI
-         │
-         ▼ (git push)
-    GitHub Repository
-         │
-         ▼ (triggers)
-    GitHub Action Orchestrator
-    ├── Reviews completed tasks
-    ├── Auto-merges approved work
-    ├── Claude Strategist handles stuck
-    └── Emails you (rarely)
-```
-
 ## Session Profiles
 
-- **backend**: API, database, backend logic
-- **frontend**: UI, components, styling
-- **testing**: Tests, E2E, verification
+| Profile | Focus | Agents |
+|---------|-------|--------|
+| **database** | Migrations, schemas, RLS | database-engineer, database-debugger |
+| **backend** | APIs, services, routes | api-engineer, backend-debugger |
+| **frontend** | UI, components, pages | ui-designer, frontend-debugger |
+| **testing** | E2E, integration tests | testing-engineer, browser-automation |
 
 ## Requirements
 
@@ -119,20 +161,17 @@ Your Laptop (tmux sessions)
 
 DevFactory uses **GitHub Issues** for notifications - no email setup required!
 
-You'll see issues created for:
 - ❓ **Need Your Input** - When Claude Strategist can't resolve something
 - ✅ **Progress Update** - When a batch of tasks is merged  
 - 🎉 **Project Complete** - When everything is done
-
-Just watch your GitHub notifications!
 
 ## Integration with DevFactory v3.0
 
 This works alongside your existing DevFactory setup:
 
-1. Use `/plan-product`, `/shape-spec`, `/create-spec` as normal
-2. Use `/orchestrate-tasks` to generate orchestration.yml
-3. Run `devfactory start` to execute in parallel
+1. Use `/plan-product`, `/shape-spec`, `/create-spec` as normal (in Claude Code)
+2. Use `/orchestrate-tasks` to generate orchestration.yml per spec
+3. Run `devfactory start` to execute in parallel (4-stage pipeline)
 4. Use `/debug-verify` to validate when complete
 
 ## License
