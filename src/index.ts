@@ -20,7 +20,6 @@ program
   .command('init')
   .description('Initialize DevFactory in current project')
   .option('-n, --name <name>', 'Project name')
-  .option('-e, --email <email>', 'Notification email')
   .action(initCommand);
 
 program
