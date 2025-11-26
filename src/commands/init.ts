@@ -36,25 +36,39 @@ export async function initCommand(options: InitOptions) {
     }
   }
   
-  // Create session profiles
+  // Create session profiles - 4-stage pipeline
   const profiles = {
+    database: {
+      name: 'Database Worker',
+      agents: [
+        'database-engineer',
+        'database-debugger',
+      ],
+      skills: [
+        'supabase-rls-development',
+        'supabase-mcp',
+      ],
+      focus_keywords: [
+        'migration', 'schema', 'table', 'column', 'index',
+        'rls', 'policy', 'database', 'sql', 'supabase',
+        'foreign key', 'constraint', 'seed', 'type',
+      ],
+    },
     backend: {
       name: 'Backend Worker',
       agents: [
         'api-engineer',
         'backend-debugger',
         'backend-verifier',
-        'database-debugger',
-        'database-engineer',
       ],
       skills: [
         'fastapi-patterns',
-        'supabase-rls-development',
         'supabase-mcp',
       ],
       focus_keywords: [
-        'api', 'endpoint', 'database', 'model', 'migration',
-        'backend', 'server', 'query', 'schema', 'route',
+        'api', 'endpoint', 'route', 'handler', 'service',
+        'backend', 'server', 'controller', 'middleware',
+        'auth', 'validation', 'request', 'response',
       ],
     },
     frontend: {
@@ -70,6 +84,7 @@ export async function initCommand(options: InitOptions) {
       focus_keywords: [
         'component', 'page', 'ui', 'frontend', 'styling',
         'responsive', 'form', 'layout', 'css', 'react',
+        'hook', 'state', 'props', 'tailwind',
       ],
     },
     testing: {
@@ -85,6 +100,7 @@ export async function initCommand(options: InitOptions) {
       focus_keywords: [
         'test', 'e2e', 'integration', 'unit', 'verification',
         'assertion', 'mock', 'fixture', 'spec', 'coverage',
+        'playwright', 'jest', 'scenario',
       ],
     },
   };
@@ -98,12 +114,13 @@ export async function initCommand(options: InitOptions) {
     }
   }
   
-  // Create session files
+  // Create session files - 4-stage pipeline
   const sessionsDir = path.join(devfactoryDir, 'sessions');
   const sessionConfigs = [
-    { id: 'session-1', name: 'Backend Worker', profile: 'backend' },
-    { id: 'session-2', name: 'Frontend Worker', profile: 'frontend' },
-    { id: 'session-3', name: 'Testing Worker', profile: 'testing' },
+    { id: 'session-1', name: 'Database Worker', profile: 'database' },
+    { id: 'session-2', name: 'Backend Worker', profile: 'backend' },
+    { id: 'session-3', name: 'Frontend Worker', profile: 'frontend' },
+    { id: 'session-4', name: 'Testing Worker', profile: 'testing' },
   ];
   
   for (const config of sessionConfigs) {
@@ -133,8 +150,9 @@ export async function initCommand(options: InitOptions) {
     project_name: projectName,
     branch_prefix: 'devfactory/',
     sessions: {
-      count: 3,
-      profiles: ['backend', 'frontend', 'testing'],
+      count: 4,
+      profiles: ['database', 'backend', 'frontend', 'testing'],
+      pipeline_order: ['database', 'backend', 'frontend', 'testing'],
     },
     orchestrator: {
       model: 'claude-sonnet-4-20250514',
