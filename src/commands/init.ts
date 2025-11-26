@@ -3,7 +3,6 @@ import * as path from 'path';
 
 interface InitOptions {
   name?: string;
-  email?: string;
 }
 
 export async function initCommand(options: InitOptions) {
@@ -129,7 +128,6 @@ export async function initCommand(options: InitOptions) {
   // Create or update distributed config
   const configPath = path.join(devfactoryDir, 'distributed-config.json');
   const projectName = options.name || path.basename(cwd);
-  const email = options.email || 'your-email@example.com';
   
   const config = {
     project_name: projectName,
@@ -144,8 +142,7 @@ export async function initCommand(options: InitOptions) {
       max_review_attempts: 3,
     },
     notifications: {
-      email: email,
-      sendgrid_configured: false,
+      method: 'github-issues',
     },
   };
   
