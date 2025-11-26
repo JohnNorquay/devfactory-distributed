@@ -1,0 +1,38 @@
+{
+  "name": "devfactory-distributed",
+  "version": "3.1.0",
+  "description": "Distributed execution system for DevFactory v3.1",
+  "main": "dist/index.js",
+  "bin": {
+    "devfactory": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "lint": "eslint src/**/*.ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "devfactory",
+    "claude",
+    "ai",
+    "automation",
+    "development"
+  ],
+  "author": "Johnny5",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "simple-git": "^3.21.0",
+    "yaml": "^2.3.4",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
