@@ -8,19 +8,59 @@ import { setupGithubCommand } from './commands/setup-github';
 import { stuckCommand } from './commands/stuck';
 import { startCommand } from './commands/start';
 import { stopCommand } from './commands/stop';
+import { releaseTheBeastCommand, killTheBeastCommand } from './commands/release-the-beast';
+import { orchestrateCommand } from './commands/orchestrate';
 
 const program = new Command();
 
 program
   .name('devfactory')
-  .description('DevFactory Distributed v3.1 - Autonomous parallel development')
-  .version('3.1.0');
+  .description('DevFactory v4.0 - Autonomous parallel development with local orchestration')
+  .version('4.0.0');
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
 
 program
   .command('init')
   .description('Initialize DevFactory in current project')
-  .option('-n, --name <name>', 'Project name')
+  .option('-n, --name <n>', 'Project name')
   .action(initCommand);
+
+// ============================================================================
+// THE BEAST - One command to rule them all
+// ============================================================================
+
+program
+  .command('release-the-beast')
+  .description('🦁 Create all tmux sessions, start orchestrator, bootstrap workers - THE BIG ONE')
+  .option('--skip-orchestrator', 'Skip starting the orchestrator (for manual control)')
+  .option('--dry-run', 'Show what would happen without actually doing it')
+  .option('-v, --verbose', 'Verbose output')
+  .option('-i, --interval <seconds>', 'Orchestrator check interval in seconds', '30')
+  .action(releaseTheBeastCommand);
+
+program
+  .command('kill-beast')
+  .description('🔪 Kill all DevFactory tmux sessions')
+  .action(killTheBeastCommand);
+
+// ============================================================================
+// LOCAL ORCHESTRATOR
+// ============================================================================
+
+program
+  .command('orchestrate')
+  .description('🧠 Run the local orchestrator (reviews, merges, coordinates)')
+  .option('-i, --interval <seconds>', 'Check interval in seconds', '30')
+  .option('-v, --verbose', 'Verbose output with progress bar')
+  .option('--no-backup', 'Disable auto-backup to GitHub')
+  .action(orchestrateCommand);
+
+// ============================================================================
+// STATUS & MONITORING
+// ============================================================================
 
 program
   .command('status')
@@ -29,30 +69,38 @@ program
   .action(statusCommand);
 
 program
-  .command('bootstrap <session>')
-  .description('Generate bootstrap prompt for a session')
-  .option('-p, --profile <profile>', 'Session profile (backend, frontend, testing)')
-  .action(bootstrapCommand);
-
-program
-  .command('setup-github')
-  .description('Install GitHub Actions orchestrator workflow')
-  .action(setupGithubCommand);
-
-program
   .command('stuck')
   .description('Show tasks that are stuck and need attention')
   .action(stuckCommand);
 
+// ============================================================================
+// MANUAL CONTROL
+// ============================================================================
+
+program
+  .command('bootstrap <session>')
+  .description('Generate bootstrap prompt for a session')
+  .option('-p, --profile <profile>', 'Session profile (database, backend, frontend, testing)')
+  .action(bootstrapCommand);
+
 program
   .command('start')
-  .description('Start distributed execution')
-  .option('-w, --workers <n>', 'Number of worker sessions', '3')
+  .description('Start distributed execution (legacy - use release-the-beast instead)')
+  .option('-w, --workers <n>', 'Number of worker sessions', '4')
   .action(startCommand);
 
 program
   .command('stop')
   .description('Pause distributed execution')
   .action(stopCommand);
+
+// ============================================================================
+// GITHUB INTEGRATION (OPTIONAL)
+// ============================================================================
+
+program
+  .command('setup-github')
+  .description('Install GitHub Actions orchestrator workflow (optional, for remote orchestration)')
+  .action(setupGithubCommand);
 
 program.parse();
