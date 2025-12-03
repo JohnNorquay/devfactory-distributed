@@ -28,6 +28,18 @@ This keeps your context clean - subagent context is freed after each task.
 
 ---
 
+## Getting Help: The Oracle 🔮
+
+If you get stuck on a task:
+1. Update state.json with status: "stuck" and stuck_reason: "description of problem"
+2. The Oracle (running in df-oracle) will detect this
+3. Check .devfactory/oracle/guidance-{task-id}.md for help
+4. Follow the guidance and continue
+
+**DO NOT ask the human for help unless Oracle says to escalate.**
+
+---
+
 ## Your Main Loop
 
 Run this loop continuously until all tasks are done:
