@@ -1,152 +1,190 @@
-# DevFactory Distributed v3.1
+# DevFactory v4.0 - Release The Beast 🦁
 
-Autonomous parallel development system for DevFactory using a 4-stage pipeline architecture.
+Autonomous parallel development system with **local orchestration** - no GitHub Actions required.
 
-## Quick Install
+## The Big Picture
+
+```
+╔════════════════════════════════════════════════════════════════════════╗
+║  YOUR LAPTOP (5 tmux sessions - ALL LOCAL)                             ║
+║                                                                        ║
+║  ┌──────────────┐                                                      ║
+║  │ ORCHESTRATOR │  ← The brain - reviews, merges, coordinates          ║
+║  │  (df-orch)   │                                                      ║
+║  └──────┬───────┘                                                      ║
+║         │ watches filesystem                                           ║
+║         ▼                                                              ║
+║  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                  ║
+║  │ DATABASE │→│ BACKEND  │→│ FRONTEND │→│ TESTING  │                  ║
+║  │  worker  │ │  worker  │ │  worker  │ │  worker  │                  ║
+║  └──────────┘ └──────────┘ └──────────┘ └──────────┘                  ║
+║       │            │            │            │                         ║
+║       └────────────┴────────────┴────────────┘                         ║
+║                         │                                              ║
+║              .devfactory/state.json                                    ║
+║              .devfactory/tasks/                                        ║
+║                         │                                              ║
+║              git push (backup only, after specs complete)              ║
+╚════════════════════════════════════════════════════════════════════════╝
+```
+
+## Quick Start
 
 ```bash
-# Clone or copy to your plugins
+# Install
 cd ~/.claude/plugins
 git clone https://github.com/JohnNorquay/devfactory-distributed.git
-
-# Install
 cd devfactory-distributed
 npm install
 npm run build
-npm link  # Makes 'devfactory' command available globally
-```
+npm link
 
-## Usage
-
-### Initialize in Your Project
-
-```bash
+# In your project
 cd ~/projects/your-project
 devfactory init --name "YourProject"
+
+# Plan and create specs using DevFactory v3.0 commands
+# /plan-product, /shape-spec, /create-spec, /orchestrate-tasks
+
+# Then...
+export ANTHROPIC_API_KEY=your-key
+
+# 🦁 RELEASE THE BEAST
+devfactory release-the-beast
 ```
-
-### Setup GitHub Orchestrator
-
-```bash
-devfactory setup-github
-```
-
-Then add this secret to your GitHub repo:
-- `ANTHROPIC_API_KEY` - Your Anthropic API key
-
-### Start Workers
-
-```bash
-# Start the system
-devfactory start
-
-# Create all 4 pipeline workers:
-tmux new-session -d -s database
-tmux new-session -d -s backend
-tmux new-session -d -s frontend
-tmux new-session -d -s testing
-
-# Bootstrap each (attach, run claude, paste bootstrap prompt):
-devfactory bootstrap session-1  # Database worker
-devfactory bootstrap session-2  # Backend worker
-devfactory bootstrap session-3  # Frontend worker
-devfactory bootstrap session-4  # Testing worker
-```
-
-### Monitor Progress
-
-```bash
-devfactory status      # See overall progress
-devfactory stuck       # See what needs help
-devfactory stop        # Pause execution
-```
-
-## 4-Stage Pipeline Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  YOUR LAPTOP (4 tmux sessions)                                           │
-│                                                                          │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │ database │ →  │ backend  │ →  │ frontend │ →  │ testing  │          │
-│  │ worker   │    │ worker   │    │ worker   │    │ worker   │          │
-│  ├──────────┤    ├──────────┤    ├──────────┤    ├──────────┤          │
-│  │migrations│    │   APIs   │    │   UI     │    │   E2E    │          │
-│  │ schemas  │    │ services │    │  pages   │    │  tests   │          │
-│  │   RLS    │    │  routes  │    │  forms   │    │  specs   │          │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘          │
-│       │               │               │               │                 │
-│       └───────────────┴───────────────┴───────────────┘                 │
-│                               │                                          │
-│                          git push                                        │
-└──────────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-                     ┌──────────────────┐
-                     │ GitHub Actions   │
-                     │ Orchestrator     │
-                     │                  │
-                     │ • Reviews code   │
-                     │ • Auto-merges    │
-                     │ • Claude Strat.  │
-                     │ • GitHub Issues  │
-                     └──────────────────┘
-```
-
-### Pipeline Flow (5 specs example)
-
-```
-TIME →     T1    T2    T3    T4    T5    T6    T7    T8
-           ─────────────────────────────────────────────
-DB         [S1]  [S2]  [S3]  [S4]  [S5]  done   ·     ·
-Backend     ·    [S1]  [S2]  [S3]  [S4]  [S5]  done   ·
-Frontend    ·     ·    [S1]  [S2]  [S3]  [S4]  [S5]  done
-Testing     ·     ·     ·    [S1]  [S2]  [S3]  [S4]  [S5]
-           ─────────────────────────────────────────────
-                 └─── ALL 4 WORKERS BUSY ───┘
-
-[S1] = Spec 1's tasks for that layer
-```
-
-**After initial ramp-up (T4), all 4 workers run at 100% utilization!**
-
-### Why Pipeline?
-
-| Approach | Workers Busy | Efficiency |
-|----------|--------------|------------|
-| Sequential (v3.0) | 1 of 1 | 100% but slow |
-| Wave-based (3 workers) | Often waiting | ~60% |
-| **Pipeline (4 workers)** | **All 4 continuously** | **~95%** |
-
-## How It Works
-
-1. **DB Worker** completes Spec N migrations → unlocks Spec N for Backend
-2. **Backend Worker** completes Spec N APIs → unlocks Spec N for Frontend
-3. **Frontend Worker** completes Spec N UI → unlocks Spec N for Testing
-4. **Testing Worker** validates Spec N → marks complete
-5. **Orchestrator** reviews, merges, handles issues automatically
-6. **You** watch GitHub Issues, sip coffee ☕
 
 ## Commands
+
+### The Main Event
+
+| Command | Description |
+|---------|-------------|
+| `devfactory release-the-beast` | 🦁 One command to rule them all - creates tmux sessions, starts orchestrator, bootstraps workers |
+| `devfactory kill-beast` | 🔪 Terminate all DevFactory sessions |
+
+### Monitoring
+
+| Command | Description |
+|---------|-------------|
+| `devfactory status` | Show execution progress |
+| `devfactory stuck` | Show blocked tasks |
+| `devfactory orchestrate` | Run orchestrator manually (for debugging) |
+
+### Manual Control
 
 | Command | Description |
 |---------|-------------|
 | `devfactory init` | Initialize in current project |
-| `devfactory status` | Show execution status |
-| `devfactory bootstrap <session>` | Generate session bootstrap prompt |
-| `devfactory setup-github` | Install GitHub orchestrator |
-| `devfactory start` | Start distributed execution |
+| `devfactory bootstrap <session>` | Generate bootstrap prompt for a session |
+| `devfactory start` | Legacy start (use release-the-beast instead) |
 | `devfactory stop` | Pause execution |
-| `devfactory stuck` | Show stuck tasks |
+| `devfactory setup-github` | Install GitHub Actions (optional, for remote) |
+
+## The 4-Stage Pipeline
+
+```
+TIME →  T1     T2     T3     T4     T5     T6     T7     T8
+───────────────────────────────────────────────────────────
+DB      [S1]   [S2]   [S3]   [S4]   [S5]   done    ·      ·
+Backend  ·     [S1]   [S2]   [S3]   [S4]   [S5]   done    ·
+Frontend ·      ·     [S1]   [S2]   [S3]   [S4]   [S5]   done
+Testing  ·      ·      ·     [S1]   [S2]   [S3]   [S4]   [S5]
+───────────────────────────────────────────────────────────
+                └─── ALL 4 WORKERS BUSY ───┘
+```
+
+After the pipeline fills (T4), all 4 workers run at ~95% utilization!
+
+## Architecture v4.0 vs v3.1
+
+| Feature | v3.1 (GitHub Actions) | v4.0 (Local) |
+|---------|----------------------|--------------|
+| Orchestrator | GitHub Actions | Local tmux session |
+| Code Review | GitHub Actions + API | Local Anthropic API |
+| Merging | GitHub PRs | Local git merge |
+| Coordination | GitHub API | Filesystem |
+| Network Required | Always | Only for backup |
+| Latency | Seconds | Instant |
+| Debugging | GitHub Actions logs | tmux attach |
+| Cost | API + GitHub minutes | API only |
+
+## How It Works
+
+### 1. Release the Beast
+
+```bash
+devfactory release-the-beast
+```
+
+This single command:
+- Creates 5 tmux sessions (1 orchestrator + 4 workers)
+- Starts the local orchestrator watching `.devfactory/`
+- Bootstraps each worker with Claude Code
+- Begins the 4-stage pipeline
+
+### 2. Workers Claim Tasks
+
+Each worker:
+1. Checks `.devfactory/tasks/` for pending tasks matching their profile
+2. Claims a task (atomic update to task file)
+3. Creates a branch: `devfactory/<task-id>`
+4. Completes the work
+5. Updates status to "completed"
+
+### 3. Orchestrator Reviews & Merges
+
+The orchestrator (running locally):
+1. Watches for completed tasks
+2. Reviews code via Anthropic API
+3. If approved: merges branch locally
+4. If rejected: sends back to worker (up to 3 attempts)
+5. If stuck: escalates to Claude Strategist
+6. Updates downstream task dependencies
+
+### 4. Auto-Backup
+
+When a spec completes:
+```bash
+git add -A
+git commit -m "✅ Spec complete: <spec-id>"
+git push origin main
+```
+
+## Monitoring
+
+### Watch the Orchestrator
+```bash
+tmux attach -t df-orchestrator
+```
+
+### Check Individual Workers
+```bash
+tmux attach -t df-database   # DB worker
+tmux attach -t df-backend    # Backend worker
+tmux attach -t df-frontend   # Frontend worker
+tmux attach -t df-testing    # Testing worker
+
+# Detach without stopping: Ctrl+B, then D
+```
+
+### Check Progress
+```bash
+devfactory status
+```
+
+### See Stuck Tasks
+```bash
+devfactory stuck
+```
 
 ## Session Profiles
 
 | Profile | Focus | Agents |
 |---------|-------|--------|
-| **database** | Migrations, schemas, RLS | database-engineer, database-debugger |
-| **backend** | APIs, services, routes | api-engineer, backend-debugger |
-| **frontend** | UI, components, pages | ui-designer, frontend-debugger |
-| **testing** | E2E, integration tests | testing-engineer, browser-automation |
+| database | Migrations, schemas, RLS | database-engineer, database-debugger |
+| backend | APIs, services, routes | api-engineer, backend-debugger |
+| frontend | UI, components, pages | ui-designer, frontend-debugger |
+| testing | E2E, integration tests | testing-engineer, browser-automation |
 
 ## Requirements
 
@@ -154,25 +192,41 @@ Testing     ·     ·     ·    [S1]  [S2]  [S3]  [S4]  [S5]
 - Git
 - tmux
 - Claude Code CLI (`claude`)
-- GitHub repository
-- Anthropic API key (for orchestrator)
-
-## Notifications
-
-DevFactory uses **GitHub Issues** for notifications - no email setup required!
-
-- ❓ **Need Your Input** - When Claude Strategist can't resolve something
-- ✅ **Progress Update** - When a batch of tasks is merged  
-- 🎉 **Project Complete** - When everything is done
+- Anthropic API key (`ANTHROPIC_API_KEY` env var)
 
 ## Integration with DevFactory v3.0
 
-This works alongside your existing DevFactory setup:
+This works alongside your existing DevFactory plugin:
 
-1. Use `/plan-product`, `/shape-spec`, `/create-spec` as normal (in Claude Code)
-2. Use `/orchestrate-tasks` to generate orchestration.yml per spec
-3. Run `devfactory start` to execute in parallel (4-stage pipeline)
-4. Use `/debug-verify` to validate when complete
+1. Use `/plan-product`, `/shape-spec`, `/create-spec` as normal
+2. Use `/orchestrate-tasks` to generate orchestration.yml
+3. Run `devfactory release-the-beast` 🦁
+4. Go have coffee ☕
+
+## Notifications
+
+Check `.devfactory/issues/` for items needing your attention:
+- Tasks that need human input
+- Specs requiring modification
+- Strategic decisions
+
+## Why Local?
+
+For a single developer on a single machine, GitHub orchestration is overengineered:
+
+| Local-Only | GitHub-Based |
+|------------|--------------|
+| Instant coordination | Network latency |
+| No PR ceremony | PR creation/merge |
+| Works offline | Needs internet |
+| Simple debugging | GitHub Actions logs |
+| Just files | Cloud complexity |
+| ~$2 API costs | Same + GitHub overhead |
+
+GitHub integration is still available via `setup-github` for:
+- Multi-machine setups
+- Team collaboration
+- CI/CD integration
 
 ## License
 
