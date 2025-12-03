@@ -1,7 +1,7 @@
 {
   "name": "devfactory-distributed",
-  "version": "3.1.0",
-  "description": "Distributed execution system for DevFactory v3.1",
+  "version": "4.0.0",
+  "description": "DevFactory v4.0 - Autonomous parallel development with local orchestration",
   "main": "dist/index.js",
   "bin": {
     "devfactory": "./dist/index.js"
@@ -36,3 +36,4 @@
     "node": ">=18.0.0"
   }
 }
+
