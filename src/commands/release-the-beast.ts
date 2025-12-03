@@ -236,8 +236,36 @@ export async function releaseTheBeastCommand(options: ReleaseOptions) {
   console.log('\n🛎️  Notifications:\n');
   console.log('   Check .devfactory/issues/ for items needing attention');
   
-  console.log('\n');
-  console.log('   Now go have some coffee ☕ - the beast is working!');
+  // Start the dashboard
+  console.log('\n🖥️  Starting Beast Dashboard...\n');
+  
+  const dashboardPort = 5555;
+  execSync(`tmux send-keys -t df-orchestrator "# Dashboard will be available at http://localhost:${dashboardPort}" Enter`, { stdio: 'pipe' });
+  
+  // Try to open dashboard in browser
+  const dashboardUrl = `http://localhost:${dashboardPort}`;
+  try {
+    const openCmd = process.platform === 'darwin' ? 'open' :
+                    process.platform === 'win32' ? 'start' : 
+                    'xdg-open';
+    execSync(`${openCmd} ${dashboardUrl}`, { stdio: 'ignore' });
+    console.log(`   ✓ Dashboard opened at ${dashboardUrl}`);
+  } catch {
+    console.log(`   Dashboard available at: ${dashboardUrl}`);
+  }
+  
+  // Try to open the app preview
+  const appUrl = 'http://localhost:3000';
+  console.log(`   App preview will be at: ${appUrl}`);
+  
+  console.log('\n' + '━'.repeat(70));
+  console.log('');
+  console.log('   🦁 THE BEAST IS WORKING!');
+  console.log('');
+  console.log('   Watch the dashboard, sip your coffee ☕');
+  console.log('   I\'ll handle everything from here.');
+  console.log('');
+  console.log('━'.repeat(70));
   console.log('\n');
 }
 
