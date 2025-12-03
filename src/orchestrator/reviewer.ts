@@ -188,7 +188,7 @@ async function callClaudeAPI(prompt: string, apiKey: string): Promise<string> {
     throw new Error(`Claude API error: ${response.status} - ${error}`);
   }
   
-  const data = await response.json();
+  const data = await response.json() as { content: Array<{ text: string }> };
   return data.content[0].text;
 }
 
