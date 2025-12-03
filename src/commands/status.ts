@@ -65,13 +65,14 @@ export async function statusCommand(options: StatusOptions) {
     const sessionFiles = fs.readdirSync(sessionsDir).filter(f => f.endsWith('.json'));
     for (const file of sessionFiles) {
       const session = JSON.parse(fs.readFileSync(path.join(sessionsDir, file), 'utf-8'));
-      const statusIcon = {
+      const statusIcons: Record<string, string> = {
         'idle': '⚪',
         'working': '🟢',
         'waiting': '🟡',
         'completed': '✅',
         'error': '🔴',
-      }[session.status] || '⚪';
+      };
+      const statusIcon = statusIcons[session.status] || '⚪';
       
       console.log(`${statusIcon} ${session.name} (${session.session_id})`);
       console.log(`   Profile: ${session.profile}`);
@@ -87,12 +88,13 @@ export async function statusCommand(options: StatusOptions) {
     console.log('\n━━━ Recent Interventions ━━━\n');
     const recent = state.interventions.slice(-5);
     for (const intervention of recent) {
-      const icon = {
+      const interventionIcons: Record<string, string> = {
         'fix_applied': '🔧',
         'skipped': '⏭️',
         'spec_modified': '📝',
         'human_needed': '❓',
-      }[intervention.type] || '•';
+      };
+      const icon = interventionIcons[intervention.type] || '•';
       console.log(`${icon} ${intervention.description}`);
     }
   }
@@ -104,3 +106,4 @@ export async function statusCommand(options: StatusOptions) {
   
   console.log('\n');
 }
+
