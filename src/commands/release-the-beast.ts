@@ -48,17 +48,25 @@ const BANNER = `
 ║     ██████╔╝███████╗██║  ██║███████║   ██║       ██╗██╗██╗          ║
 ║     ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝       ╚═╝╚═╝╚═╝          ║
 ║                                                                      ║
-║              DevFactory v4.0 - Autonomous Development                ║
+║              DevFactory v4.1 - Subagent Architecture                 ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 `;
 
+// Model configuration - v4.1
+const MODELS = {
+  workers: 'claude-sonnet-4-5-20250929',      // Fast & efficient for execution
+  orchestrator: 'claude-opus-4-5-20251101',   // Strategic for reviews
+  oracle: 'claude-opus-4-5-20251101',         // Wise for helping stuck workers
+};
+
 const SESSIONS = [
-  { name: 'df-orchestrator', profile: 'orchestrator', session: 'orchestrator', description: 'The Brain - Reviews, merges, coordinates' },
-  { name: 'df-database', profile: 'database', session: 'session-1', description: 'DB migrations & schemas' },
-  { name: 'df-backend', profile: 'backend', session: 'session-2', description: 'APIs & services' },
-  { name: 'df-frontend', profile: 'frontend', session: 'session-3', description: 'UI components & pages' },
-  { name: 'df-testing', profile: 'testing', session: 'session-4', description: 'E2E & integration tests' },
+  { name: 'df-orchestrator', profile: 'orchestrator', session: 'orchestrator', description: 'The Brain - Reviews, merges, coordinates', model: MODELS.orchestrator },
+  { name: 'df-oracle', profile: 'oracle', session: 'oracle', description: 'The Oracle - Helps stuck workers', model: MODELS.oracle },
+  { name: 'df-database', profile: 'database', session: 'session-1', description: 'DB migrations & schemas', model: MODELS.workers },
+  { name: 'df-backend', profile: 'backend', session: 'session-2', description: 'APIs & services', model: MODELS.workers },
+  { name: 'df-frontend', profile: 'frontend', session: 'session-3', description: 'UI components & pages', model: MODELS.workers },
+  { name: 'df-testing', profile: 'testing', session: 'session-4', description: 'E2E & integration tests', model: MODELS.workers },
 ];
 
 export async function releaseTheBeastCommand(options: ReleaseOptions) {
@@ -174,24 +182,33 @@ export async function releaseTheBeastCommand(options: ReleaseOptions) {
     }
   }
   
-  // Start orchestrator
+  // Start orchestrator (uses Opus via API)
   if (!options.skipOrchestrator) {
-    console.log('\n🧠 Starting Local Orchestrator...\n');
+    console.log('\n🧠 Starting Local Orchestrator (Opus 4.5)...\n');
     
     const interval = parseInt(options.interval || '30');
     const orchestratorCmd = `devfactory orchestrate --interval ${interval}${options.verbose ? ' --verbose' : ''}`;
     
     execSync(`tmux send-keys -t df-orchestrator "${orchestratorCmd}" Enter`, { stdio: 'pipe' });
     console.log(`   ✓ Orchestrator running in df-orchestrator (checking every ${interval}s)`);
+    
+    // Start Oracle (uses Opus via API)
+    console.log('\n🔮 Starting The Oracle (Opus 4.5)...\n');
+    const oracleCmd = `devfactory oracle${options.verbose ? ' --verbose' : ''}`;
+    execSync(`tmux send-keys -t df-oracle "${oracleCmd}" Enter`, { stdio: 'pipe' });
+    console.log(`   ✓ Oracle watching for stuck workers in df-oracle`);
   }
   
-  // Bootstrap workers
-  console.log('\n🤖 Bootstrapping workers...\n');
+  // Bootstrap workers (uses Claude Code CLI - model determined by user's plan)
+  // Skip orchestrator (index 0) and oracle (index 1)
+  const workerSessions = SESSIONS.filter(s => !['orchestrator', 'oracle'].includes(s.profile));
+  console.log('\n🤖 Bootstrapping workers (Sonnet 4.5 via Claude Code)...\n');
   
-  for (const session of SESSIONS.slice(1)) { // Skip orchestrator
+  for (const session of workerSessions) {
     const bootstrapPrompt = generateBootstrapPrompt(session, cwd);
     
     // Start claude in the session
+    // Note: Model is determined by user's Claude Code plan settings
     execSync(`tmux send-keys -t ${session.name} "claude --dangerously-skip-permissions" Enter`, { stdio: 'pipe' });
     
     // Wait longer for claude to fully start (v4.1: increased from 2s to 5s)
@@ -217,7 +234,8 @@ export async function releaseTheBeastCommand(options: ReleaseOptions) {
   console.log('━'.repeat(70));
   
   console.log('\n📺 Sessions created:\n');
-  console.log('   tmux attach -t df-orchestrator  # Watch the brain');
+  console.log('   tmux attach -t df-orchestrator  # Watch the brain (Opus)');
+  console.log('   tmux attach -t df-oracle        # Watch the oracle (Opus)');
   console.log('   tmux attach -t df-database      # Database worker');
   console.log('   tmux attach -t df-backend       # Backend worker');
   console.log('   tmux attach -t df-frontend      # Frontend worker');
