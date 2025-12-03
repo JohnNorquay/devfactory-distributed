@@ -54,7 +54,7 @@ const BANNER = `
 `;
 
 const SESSIONS = [
-  { name: 'df-orchestrator', profile: 'orchestrator', description: 'The Brain - Reviews, merges, coordinates' },
+  { name: 'df-orchestrator', profile: 'orchestrator', session: 'orchestrator', description: 'The Brain - Reviews, merges, coordinates' },
   { name: 'df-database', profile: 'database', session: 'session-1', description: 'DB migrations & schemas' },
   { name: 'df-backend', profile: 'backend', session: 'session-2', description: 'APIs & services' },
   { name: 'df-frontend', profile: 'frontend', session: 'session-3', description: 'UI components & pages' },
