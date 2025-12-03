@@ -122,6 +122,9 @@ export class LocalOrchestrator {
     for (const specId of completedSpecs) {
       this.log(`\n🎉 Spec completed: ${specId}`);
       
+      // Run tests and visual verification
+      await this.runDebugVerify(specId);
+      
       if (this.config.autoBackup) {
         await this.backupToGitHub(specId);
       }
@@ -343,6 +346,75 @@ export class LocalOrchestrator {
       this.log(`   ✅ Backed up to GitHub: ${specId}`);
     } catch (error) {
       this.log(`   ⚠️  Backup failed (will retry): ${error}`);
+    }
+  }
+  
+  private async runDebugVerify(specId: string): Promise<void> {
+    const cwd = this.config.projectPath;
+    const specDir = path.join(cwd, '.devfactory', 'specs', specId);
+    
+    this.log(`   🧪 Running debug-verify for ${specId}...`);
+    
+    try {
+      // Check if we have a dev server running
+      const devServerRunning = await this.checkDevServer();
+      
+      if (!devServerRunning) {
+        this.log(`   📦 Starting dev server...`);
+        // Start in background - don't block
+        spawn('npm', ['run', 'dev'], { 
+          cwd, 
+          detached: true, 
+          stdio: 'ignore' 
+        }).unref();
+        
+        // Wait for server to start
+        await this.sleep(5000);
+      }
+      
+      // Run playwright tests if they exist
+      const testDir = path.join(specDir, 'tests');
+      if (fs.existsSync(testDir)) {
+        this.log(`   🎭 Running Playwright tests...`);
+        
+        try {
+          execSync('npx playwright test --reporter=json', { 
+            cwd, 
+            stdio: 'pipe',
+            timeout: 120000 // 2 minute timeout
+          });
+          this.log(`   ✅ All tests passed!`);
+        } catch (error) {
+          this.log(`   ⚠️  Some tests failed - continuing...`);
+        }
+      }
+      
+      // Open browser for visual verification
+      this.log(`   🌐 Opening browser for visual verification...`);
+      
+      const appUrl = 'http://localhost:3000';
+      try {
+        const openCmd = process.platform === 'darwin' ? 'open' :
+                        process.platform === 'win32' ? 'start' : 'xdg-open';
+        execSync(`${openCmd} ${appUrl}`, { stdio: 'ignore' });
+      } catch {
+        this.log(`   App available at: ${appUrl}`);
+      }
+      
+    } catch (error) {
+      this.log(`   ⚠️  Debug-verify error: ${error}`);
+    }
+  }
+  
+  private async checkDevServer(): Promise<boolean> {
+    try {
+      const response = await fetch('http://localhost:3000', { 
+        method: 'HEAD',
+        signal: AbortSignal.timeout(2000)
+      });
+      return response.ok;
+    } catch {
+      return false;
     }
   }
   
