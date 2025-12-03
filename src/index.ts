@@ -10,6 +10,7 @@ import { startCommand } from './commands/start';
 import { stopCommand } from './commands/stop';
 import { releaseTheBeastCommand, killTheBeastCommand } from './commands/release-the-beast';
 import { orchestrateCommand } from './commands/orchestrate';
+import { dashboardCommand } from './dashboard';
 
 const program = new Command();
 
@@ -57,6 +58,13 @@ program
   .option('-v, --verbose', 'Verbose output with progress bar')
   .option('--no-backup', 'Disable auto-backup to GitHub')
   .action(orchestrateCommand);
+
+program
+  .command('dashboard')
+  .description('🖥️  Open the Beast Dashboard in your browser')
+  .option('-p, --port <port>', 'Dashboard port', '5555')
+  .option('-a, --app-url <url>', 'App preview URL', 'http://localhost:3000')
+  .action(dashboardCommand);
 
 // ============================================================================
 // STATUS & MONITORING
