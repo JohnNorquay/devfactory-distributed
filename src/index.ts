@@ -11,13 +11,14 @@ import { stopCommand } from './commands/stop';
 import { releaseTheBeastCommand, killTheBeastCommand } from './commands/release-the-beast';
 import { orchestrateCommand } from './commands/orchestrate';
 import { dashboardCommand } from './dashboard';
+import { oracleCommand } from './oracle/oracle';
 
 const program = new Command();
 
 program
   .name('devfactory')
-  .description('DevFactory v4.0 - Autonomous parallel development with local orchestration')
-  .version('4.0.0');
+  .description('DevFactory v4.1 - Autonomous parallel development with subagent architecture')
+  .version('4.1.0');
 
 // ============================================================================
 // INITIALIZATION
@@ -48,7 +49,7 @@ program
   .action(killTheBeastCommand);
 
 // ============================================================================
-// LOCAL ORCHESTRATOR
+// LOCAL ORCHESTRATOR & ORACLE
 // ============================================================================
 
 program
@@ -58,6 +59,12 @@ program
   .option('-v, --verbose', 'Verbose output with progress bar')
   .option('--no-backup', 'Disable auto-backup to GitHub')
   .action(orchestrateCommand);
+
+program
+  .command('oracle')
+  .description('🔮 Run the Oracle - helps stuck workers automatically (uses Opus)')
+  .option('-v, --verbose', 'Verbose output')
+  .action(oracleCommand);
 
 program
   .command('dashboard')
