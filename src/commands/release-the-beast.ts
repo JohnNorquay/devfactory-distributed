@@ -194,13 +194,17 @@ export async function releaseTheBeastCommand(options: ReleaseOptions) {
     // Start claude in the session
     execSync(`tmux send-keys -t ${session.name} "claude --dangerously-skip-permissions" Enter`, { stdio: 'pipe' });
     
-    // Wait a moment for claude to start
-    await sleep(2000);
+    // Wait longer for claude to fully start (v4.1: increased from 2s to 5s)
+    await sleep(5000);
     
-    // Send the bootstrap prompt
-    // Escape special characters and send
-    const escapedPrompt = bootstrapPrompt.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-    execSync(`tmux send-keys -t ${session.name} "${escapedPrompt}" Enter`, { stdio: 'pipe' });
+    // Send the bootstrap prompt - use file-based approach for complex prompts
+    const promptFile = `/tmp/bootstrap-${session.profile}.txt`;
+    fs.writeFileSync(promptFile, bootstrapPrompt);
+    
+    // Send prompt via file to avoid escaping issues
+    execSync(`tmux send-keys -t ${session.name} "cat ${promptFile}" Enter`, { stdio: 'pipe' });
+    await sleep(500);
+    execSync(`tmux send-keys -t ${session.name} Enter`, { stdio: 'pipe' });
     
     console.log(`   ✓ ${session.name} bootstrapped`);
   }
@@ -282,37 +286,45 @@ function getExistingTmuxSessions(): string[] {
 }
 
 function generateBootstrapPrompt(session: { name: string; profile: string; session: string; description: string }, cwd: string): string {
-  return `You are a DevFactory ${session.profile.toUpperCase()} worker.
+  // v4.1: Use subagent pattern with auto-polling and state updates
+  
+  const basePrompt = `Read the file .devfactory/beast/bootstrap-${session.profile}.md and follow those instructions exactly.
 
-Your role: ${session.description}
+You are the ${session.profile.toUpperCase()} WORKER in the DevFactory Beast Mode pipeline.
 
-Read your session config at: ${cwd}/.devfactory/sessions/${session.session}.json
-Read your profile at: ${cwd}/.devfactory/profiles/${session.profile}.json
+CRITICAL REQUIREMENTS (v4.1):
+1. Use SUBAGENTS for each task - spawn a subagent, let it complete, context gets freed
+2. UPDATE state.json after EVERY task completion
+3. POLL every 30 seconds - never stop until told
+4. Send HEARTBEAT every 60 seconds even when idle
 
-WORKFLOW:
-1. Check .devfactory/tasks/ for tasks with status "pending" matching your profile
-2. Claim a task by updating its status to "claimed"
-3. Create a branch: git checkout -b devfactory/<task-id>
-4. Complete the task following the spec
-5. Commit your changes
-6. Update task status to "completed"
-7. The orchestrator will review and merge automatically
-8. Repeat from step 1
+Your queue is in: .devfactory/beast/state.json → queue.${session.profile}
+Your status goes in: .devfactory/beast/state.json → pipeline.${session.profile}
 
-PIPELINE RULES:
-${session.profile === 'database' ? '- You work first. Your migrations unlock backend tasks.' : ''}
-${session.profile === 'backend' ? '- Wait for database tasks on a spec before starting backend tasks for that spec.' : ''}
-${session.profile === 'frontend' ? '- Wait for backend tasks on a spec before starting frontend tasks for that spec.' : ''}
-${session.profile === 'testing' ? '- Wait for frontend tasks on a spec before starting testing tasks for that spec.' : ''}
+START YOUR POLLING LOOP NOW. DO NOT STOP.`;
 
-IMPORTANT:
-- Only claim tasks matching your profile keywords
-- Update task files atomically
-- Commit frequently with clear messages
-- If stuck, set task status to "stuck" with notes
+  // Add profile-specific notes
+  const profileNotes: Record<string, string> = {
+    database: `
+SPECIAL: You are FIRST in the pipeline. Your work unblocks everyone else.
+Focus on: migrations, schemas, RLS policies, indexes.`,
+    
+    backend: `
+SPECIAL: Pull latest code before each task (need DB migrations).
+Focus on: API routes, server actions, services.`,
+    
+    frontend: `
+SPECIAL: Start dev server on first task: npm run dev &
+Focus on: components, pages, forms, layouts.`,
+    
+    testing: `
+SPECIAL: Actually RUN the tests, don't just write them.
+Report test pass/fail counts in state.json.`,
+  };
 
-Start by checking for available tasks now.`;
+  return basePrompt + (profileNotes[session.profile] || '');
 }
+
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
