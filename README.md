@@ -1,34 +1,31 @@
-# DevFactory v4.0 - Release The Beast 🦁
+# DevFactory v4.1 - Release The Beast 🦁
 
-Autonomous parallel development system with **local orchestration** - no GitHub Actions required.
+Autonomous parallel development system with **local orchestration** and **The Oracle**.
 
-## The Big Picture
+---
 
-```
-╔════════════════════════════════════════════════════════════════════════╗
-║  YOUR LAPTOP (5 tmux sessions - ALL LOCAL)                             ║
-║                                                                        ║
-║  ┌──────────────┐                                                      ║
-║  │ ORCHESTRATOR │  ← The brain - reviews, merges, coordinates          ║
-║  │  (df-orch)   │                                                      ║
-║  └──────┬───────┘                                                      ║
-║         │ watches filesystem                                           ║
-║         ▼                                                              ║
-║  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                  ║
-║  │ DATABASE │→│ BACKEND  │→│ FRONTEND │→│ TESTING  │                  ║
-║  │  worker  │ │  worker  │ │  worker  │ │  worker  │                  ║
-║  └──────────┘ └──────────┘ └──────────┘ └──────────┘                  ║
-║       │            │            │            │                         ║
-║       └────────────┴────────────┴────────────┘                         ║
-║                         │                                              ║
-║              .devfactory/state.json                                    ║
-║              .devfactory/tasks/                                        ║
-║                         │                                              ║
-║              git push (backup only, after specs complete)              ║
-╚════════════════════════════════════════════════════════════════════════╝
+## 🚀 Quick Start (Remote Beast Machine)
+
+```bash
+# SSH to beast machine
+ssh beastmode@192.168.1.22
+wsl
+cd ~/projects/mycpa
+
+# Release the beast!
+devfactory release-the-beast --verbose
 ```
 
-## Quick Start
+**From your workstation, tunnel the dashboard:**
+```bash
+ssh -L 5555:localhost:5555 beastmode@192.168.1.22 -t wsl
+```
+
+Then open: http://localhost:5555
+
+---
+
+## 📦 Installation
 
 ```bash
 # Install
@@ -39,19 +36,51 @@ npm install
 npm run build
 npm link
 
-# In your project
-cd ~/projects/your-project
-devfactory init --name "YourProject"
-
-# Plan and create specs using DevFactory v3.0 commands
-# /plan-product, /shape-spec, /create-spec, /orchestrate-tasks
-
-# Then...
+# Set API key
 export ANTHROPIC_API_KEY=your-key
 
-# 🦁 RELEASE THE BEAST
-devfactory release-the-beast
+# Verify
+devfactory --version  # Should show 4.1.0
 ```
+
+---
+
+## The Big Picture (v4.1)
+
+```
+╔════════════════════════════════════════════════════════════════════════╗
+║  YOUR MACHINE (6 tmux sessions - ALL LOCAL)                            ║
+║                                                                        ║
+║  ┌──────────────┐  ┌──────────────┐                                   ║
+║  │ ORCHESTRATOR │  │    ORACLE    │                                   ║
+║  │    (Opus)    │  │    (Opus)    │  ← Helps stuck workers            ║
+║  └──────┬───────┘  └──────┬───────┘                                   ║
+║         │                 │                                            ║
+║         └────────┬────────┘                                            ║
+║                  │ watches state.json                                  ║
+║                  ▼                                                     ║
+║  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                  ║
+║  │ DATABASE │→│ BACKEND  │→│ FRONTEND │→│ TESTING  │                  ║
+║  │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │                  ║
+║  └──────────┘ └──────────┘ └──────────┘ └──────────┘                  ║
+║       │            │            │            │                         ║
+║       └────────────┴────────────┴────────────┘                         ║
+║                         │                                              ║
+║              .devfactory/beast/state.json                              ║
+║              .devfactory/oracle/guidance-*.md                          ║
+╚════════════════════════════════════════════════════════════════════════╝
+```
+
+## v4.1 Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔮 **The Oracle** | Opus-powered helper that auto-assists stuck workers |
+| 📊 **Model Tiers** | Workers use Sonnet (fast), Orchestrator/Oracle use Opus (smart) |
+| 🔄 **Subagent Pattern** | Workers spawn subagents per task - no context bloat |
+| 💓 **Heartbeats** | Workers report every 60s - detect dead sessions |
+| 📡 **Auto-polling** | Workers poll every 30s, never stop |
+| 📝 **State Updates** | Workers update state.json for live dashboard |
 
 ## Commands
 
@@ -59,7 +88,7 @@ devfactory release-the-beast
 
 | Command | Description |
 |---------|-------------|
-| `devfactory release-the-beast` | 🦁 One command to rule them all - creates tmux sessions, starts orchestrator, bootstraps workers |
+| `devfactory release-the-beast` | 🦁 Creates 6 tmux sessions, starts everything |
 | `devfactory kill-beast` | 🔪 Terminate all DevFactory sessions |
 
 ### Monitoring
@@ -67,18 +96,17 @@ devfactory release-the-beast
 | Command | Description |
 |---------|-------------|
 | `devfactory status` | Show execution progress |
+| `devfactory dashboard` | Start web dashboard on :5555 |
 | `devfactory stuck` | Show blocked tasks |
-| `devfactory orchestrate` | Run orchestrator manually (for debugging) |
+| `devfactory oracle` | Run Oracle manually |
+| `devfactory orchestrate` | Run orchestrator manually |
 
-### Manual Control
+### Setup
 
 | Command | Description |
 |---------|-------------|
-| `devfactory init` | Initialize in current project |
-| `devfactory bootstrap <session>` | Generate bootstrap prompt for a session |
-| `devfactory start` | Legacy start (use release-the-beast instead) |
-| `devfactory stop` | Pause execution |
-| `devfactory setup-github` | Install GitHub Actions (optional, for remote) |
+| `devfactory init --name "Project"` | Initialize in current project |
+| `devfactory bootstrap <session>` | Generate bootstrap prompt |
 
 ## The 4-Stage Pipeline
 
@@ -95,138 +123,68 @@ Testing  ·      ·      ·     [S1]   [S2]   [S3]   [S4]   [S5]
 
 After the pipeline fills (T4), all 4 workers run at ~95% utilization!
 
-## Architecture v4.0 vs v3.1
+## Oracle Flow (v4.1)
 
-| Feature | v3.1 (GitHub Actions) | v4.0 (Local) |
-|---------|----------------------|--------------|
-| Orchestrator | GitHub Actions | Local tmux session |
-| Code Review | GitHub Actions + API | Local Anthropic API |
-| Merging | GitHub PRs | Local git merge |
-| Coordination | GitHub API | Filesystem |
-| Network Required | Always | Only for backup |
-| Latency | Seconds | Instant |
-| Debugging | GitHub Actions logs | tmux attach |
-| Cost | API + GitHub minutes | API only |
-
-## How It Works
-
-### 1. Release the Beast
-
-```bash
-devfactory release-the-beast
+```
+Worker gets stuck
+      ↓
+Sets status: "stuck" in state.json
+      ↓
+Oracle detects (every 60s)
+      ↓
+Oracle consults Opus for guidance
+      ↓
+Writes .devfactory/oracle/guidance-{task}.md
+      ↓
+Worker reads guidance and continues
+      ↓
+Only escalates to human if Oracle says so
 ```
 
-This single command:
-- Creates 5 tmux sessions (1 orchestrator + 4 workers)
-- Starts the local orchestrator watching `.devfactory/`
-- Bootstraps each worker with Claude Code
-- Begins the 4-stage pipeline
+## Subagent Architecture (v4.1)
 
-### 2. Workers Claim Tasks
+Workers don't do tasks directly - they spawn subagents:
 
-Each worker:
-1. Checks `.devfactory/tasks/` for pending tasks matching their profile
-2. Claims a task (atomic update to task file)
-3. Creates a branch: `devfactory/<task-id>`
-4. Completes the work
-5. Updates status to "completed"
-
-### 3. Orchestrator Reviews & Merges
-
-The orchestrator (running locally):
-1. Watches for completed tasks
-2. Reviews code via Anthropic API
-3. If approved: merges branch locally
-4. If rejected: sends back to worker (up to 3 attempts)
-5. If stuck: escalates to Claude Strategist
-6. Updates downstream task dependencies
-
-### 4. Auto-Backup
-
-When a spec completes:
-```bash
-git add -A
-git commit -m "✅ Spec complete: <spec-id>"
-git push origin main
+```
+Worker (lean orchestrator loop)
+   │
+   ├── Spawn subagent → Task 1 → Complete → Context freed
+   ├── Spawn subagent → Task 2 → Complete → Context freed  
+   ├── Spawn subagent → Task 3 → Complete → Context freed
+   └── ... can run forever without context bloat
 ```
 
-## Monitoring
+## Tmux Sessions
 
-### Watch the Orchestrator
+| Session | Role | Model |
+|---------|------|-------|
+| `df-orchestrator` | Reviews & merges code | Opus 4.5 |
+| `df-oracle` | Helps stuck workers | Opus 4.5 |
+| `df-database` | Migrations, schemas, RLS | Sonnet 4.5 |
+| `df-backend` | APIs, server actions | Sonnet 4.5 |
+| `df-frontend` | UI, pages, components | Sonnet 4.5 |
+| `df-testing` | E2E tests | Sonnet 4.5 |
+
+**Watch a session:**
 ```bash
-tmux attach -t df-orchestrator
+tmux attach -t df-database
+# Ctrl+B, D to detach
 ```
 
-### Check Individual Workers
-```bash
-tmux attach -t df-database   # DB worker
-tmux attach -t df-backend    # Backend worker
-tmux attach -t df-frontend   # Frontend worker
-tmux attach -t df-testing    # Testing worker
+## Workflow
 
-# Detach without stopping: Ctrl+B, then D
-```
-
-### Check Progress
-```bash
-devfactory status
-```
-
-### See Stuck Tasks
-```bash
-devfactory stuck
-```
-
-## Session Profiles
-
-| Profile | Focus | Agents |
-|---------|-------|--------|
-| database | Migrations, schemas, RLS | database-engineer, database-debugger |
-| backend | APIs, services, routes | api-engineer, backend-debugger |
-| frontend | UI, components, pages | ui-designer, frontend-debugger |
-| testing | E2E, integration tests | testing-engineer, browser-automation |
+1. **Plan** with Claude Code: `/plan-product`
+2. **Shape** the spec: `/shape-spec`
+3. **Create** implementation spec: `/create-spec`
+4. **Release the beast**: `devfactory release-the-beast`
+5. **Watch** the dashboard and go touch grass 🌿
 
 ## Requirements
 
 - Node.js 18+
-- Git
 - tmux
-- Claude Code CLI (`claude`)
-- Anthropic API key (`ANTHROPIC_API_KEY` env var)
-
-## Integration with DevFactory v3.0
-
-This works alongside your existing DevFactory plugin:
-
-1. Use `/plan-product`, `/shape-spec`, `/create-spec` as normal
-2. Use `/orchestrate-tasks` to generate orchestration.yml
-3. Run `devfactory release-the-beast` 🦁
-4. Go have coffee ☕
-
-## Notifications
-
-Check `.devfactory/issues/` for items needing your attention:
-- Tasks that need human input
-- Specs requiring modification
-- Strategic decisions
-
-## Why Local?
-
-For a single developer on a single machine, GitHub orchestration is overengineered:
-
-| Local-Only | GitHub-Based |
-|------------|--------------|
-| Instant coordination | Network latency |
-| No PR ceremony | PR creation/merge |
-| Works offline | Needs internet |
-| Simple debugging | GitHub Actions logs |
-| Just files | Cloud complexity |
-| ~$2 API costs | Same + GitHub overhead |
-
-GitHub integration is still available via `setup-github` for:
-- Multi-machine setups
-- Team collaboration
-- CI/CD integration
+- Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
+- Anthropic API key (for Orchestrator/Oracle)
 
 ## License
 
