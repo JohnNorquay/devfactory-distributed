@@ -222,26 +222,40 @@ export async function releaseTheBeastCommand(options: ReleaseOptions) {
   const workerSessions = SESSIONS.filter(s => !['orchestrator', 'oracle'].includes(s.profile));
   console.log('\n🤖 Bootstrapping workers (Sonnet 4.5 via Claude Code)...\n');
   
+  // Create bootstrap directory in project
+  const bootstrapDir = path.join(cwd, '.devfactory', 'bootstraps');
+  if (!fs.existsSync(bootstrapDir)) {
+    fs.mkdirSync(bootstrapDir, { recursive: true });
+  }
+  
   for (const session of workerSessions) {
     const bootstrapPrompt = generateBootstrapPrompt(session, cwd);
     
-    // Start claude in the session
-    // Note: Model is determined by user's Claude Code plan settings
-    execSync(`tmux send-keys -t ${session.name} "claude --dangerously-skip-permissions" Enter`, { stdio: 'pipe' });
+    // Write bootstrap to project directory where Claude can read it
+    const bootstrapFile = path.join(bootstrapDir, `${session.profile}.md`);
+    fs.writeFileSync(bootstrapFile, bootstrapPrompt);
     
-    // Wait longer for claude to fully start (v4.1: increased from 2s to 5s)
-    await sleep(5000);
+    // Start claude with a direct instruction to read and execute the bootstrap
+    // Using -p flag for initial prompt if available, otherwise send after startup
+    const startCmd = `claude --dangerously-skip-permissions`;
+    execSync(`tmux send-keys -t ${session.name} "${startCmd}" Enter`, { stdio: 'pipe' });
     
-    // Send the bootstrap prompt - use file-based approach for complex prompts
-    const promptFile = `/tmp/bootstrap-${session.profile}.txt`;
-    fs.writeFileSync(promptFile, bootstrapPrompt);
+    // Wait for Claude to fully initialize
+    await sleep(4000);
     
-    // Send prompt via file to avoid escaping issues
-    execSync(`tmux send-keys -t ${session.name} "cat ${promptFile}" Enter`, { stdio: 'pipe' });
-    await sleep(500);
+    // Send a SHORT instruction that tells Claude to read the bootstrap file
+    // This is more reliable than trying to send the entire bootstrap content
+    const instruction = `Read and execute the instructions in .devfactory/bootstraps/${session.profile}.md - This is your bootstrap file. Follow it precisely. BEGIN YOUR LOOP IMMEDIATELY.`;
+    
+    // Use send-keys with -l (literal) to avoid interpretation issues
+    execSync(`tmux send-keys -t ${session.name} -l "${instruction}"`, { stdio: 'pipe' });
+    await sleep(100);
     execSync(`tmux send-keys -t ${session.name} Enter`, { stdio: 'pipe' });
     
-    console.log(`   ✓ ${session.name} bootstrapped`);
+    console.log(`   ✓ ${session.name} bootstrapped → .devfactory/bootstraps/${session.profile}.md`);
+    
+    // Stagger worker starts to avoid race conditions
+    await sleep(2000);
   }
   
   // Print status
