@@ -1,7 +1,7 @@
 {
   "name": "devfactory-distributed",
-  "version": "4.2.1",
-  "description": "DevFactory v4.2.1 - Autonomous parallel development with dependency coordination",
+  "version": "4.3.0",
+  "description": "DevFactory v4.3 - Build → Verify → Complete pattern",
   "main": "dist/index.js",
   "bin": {
     "devfactory": "./dist/index.js"
