@@ -1,7 +1,7 @@
 {
   "name": "devfactory-distributed",
-  "version": "4.1.0",
-  "description": "DevFactory v4.1 - Autonomous parallel development with subagent architecture",
+  "version": "4.2.0",
+  "description": "DevFactory v4.2 - Autonomous parallel development with reconciliation",
   "main": "dist/index.js",
   "bin": {
     "devfactory": "./dist/index.js"
