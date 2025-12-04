@@ -9,6 +9,7 @@ import { stuckCommand } from './commands/stuck';
 import { startCommand } from './commands/start';
 import { stopCommand } from './commands/stop';
 import { releaseTheBeastCommand, killTheBeastCommand } from './commands/release-the-beast';
+import { watchCommand } from './commands/watch';
 import { orchestrateCommand } from './commands/orchestrate';
 import { dashboardCommand } from './dashboard';
 import { oracleCommand } from './oracle/oracle';
@@ -48,6 +49,12 @@ program
   .command('kill-beast')
   .description('🔪 Kill all DevFactory tmux sessions')
   .action(killTheBeastCommand);
+
+program
+  .command('watch')
+  .description('👁️  Open a 6-pane view of all beast sessions')
+  .option('-l, --layout <layout>', 'Layout style: grid or simple', 'grid')
+  .action(watchCommand);
 
 // ============================================================================
 // LOCAL ORCHESTRATOR & ORACLE
