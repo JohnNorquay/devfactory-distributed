@@ -1,6 +1,6 @@
-# DevFactory v4.2 - Release The Beast 🦁
+# DevFactory v4.3 - Release The Beast 🦁
 
-Autonomous parallel development system with **local orchestration**, **The Oracle**, and **brownfield reconciliation**.
+Autonomous parallel development with **Build → Verify → Complete** pattern.
 
 ---
 
@@ -28,162 +28,121 @@ Then open: http://localhost:5555
 ## 📦 Installation
 
 ```bash
-# Install
 cd ~/.claude/plugins
 git clone https://github.com/JohnNorquay/devfactory-distributed.git
 cd devfactory-distributed
-npm install
-npm run build
-npm link
+npm install && npm run build && npm link
 
-# Set API key
 export ANTHROPIC_API_KEY=your-key
-
-# Verify
-devfactory --version  # Should show 4.2.0
+devfactory --version  # Should show 4.3.0
 ```
 
 ---
 
-## The Big Picture (v4.2)
-
-```
-╔════════════════════════════════════════════════════════════════════════╗
-║  YOUR MACHINE (6 tmux sessions - ALL LOCAL)                            ║
-║                                                                        ║
-║  ┌──────────────┐  ┌──────────────┐                                   ║
-║  │ ORCHESTRATOR │  │    ORACLE    │                                   ║
-║  │    (Opus)    │  │    (Opus)    │  ← Helps stuck workers            ║
-║  └──────┬───────┘  └──────┬───────┘                                   ║
-║         │                 │                                            ║
-║         └────────┬────────┘                                            ║
-║                  │ watches state.json                                  ║
-║                  ▼                                                     ║
-║  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                  ║
-║  │ DATABASE │→│ BACKEND  │→│ FRONTEND │→│ TESTING  │                  ║
-║  │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │                  ║
-║  └──────────┘ └──────────┘ └──────────┘ └──────────┘                  ║
-║       │            │            │            │                         ║
-║       └────────────┴────────────┴────────────┘                         ║
-║                         │                                              ║
-║              .devfactory/beast/state.json                              ║
-║              .devfactory/oracle/guidance-*.md                          ║
-╚════════════════════════════════════════════════════════════════════════╝
-```
-
-## v4.2 Features
+## v4.3 Features
 
 | Feature | Description |
 |---------|-------------|
-| 🔄 **Reconciliation** | Pre-flight scans codebase, matches to specs, updates state.json |
-| 🏗️ **Brownfield Ready** | Recognizes existing code - only builds what's missing |
-| ⏸️ **Resumable** | Interrupted? Just run again - picks up where you left off |
-| 🔮 **The Oracle** | Opus-powered helper that auto-assists stuck workers |
-| 📊 **Model Tiers** | Workers use Sonnet (fast), Orchestrator/Oracle use Opus (smart) |
-| 🔄 **Subagent Pattern** | Workers spawn subagents per task - no context bloat |
-| 💓 **Heartbeats** | Workers report every 60s - detect dead sessions |
+| ✅ **Build → Verify → Complete** | Every task verified by skeptical second subagent |
+| 🔄 **Reconciliation** | Pre-flight scans codebase, matches to specs |
+| 🏗️ **Brownfield Ready** | Recognizes existing code |
+| 🔗 **Dependency Checking** | Workers wait for upstream stages per-spec |
+| 🔮 **The Oracle** | Opus helps stuck workers automatically |
+| 📊 **Model Tiers** | Workers=Sonnet, Orchestrator/Oracle=Opus |
+| 🔄 **Subagent Pattern** | No context bloat |
 
-## Pre-Flight Reconciliation (NEW in v4.2)
+---
 
-When you run `release-the-beast`, it now:
+## Build → Verify → Complete (NEW in v4.3)
+
+Every task goes through **TWO subagents**:
 
 ```
-🔍 Pre-flight checks...
-   ✓ DevFactory initialized
-   ✓ tmux available
-   ✓ claude CLI available
-   ✓ ANTHROPIC_API_KEY configured
-   ✓ No conflicting sessions
-
-🔄 Reconciling state with codebase...
-
-   Scanning existing files...
-   Found 30 relevant files
-   
-   Loading specs...
-   Found 8 specs
-   
-   Matching against specs (Opus)...
-   ├── Foundation           34/43 tasks (79%)
-   ├── Tax Debt Core        0/28 tasks (0%)
-   ├── Bank Integration     0/31 tasks (0%)
-   └── ...
-   
-   ✓ state.json updated
-   ✓ 34 tasks marked complete
-   ✓ 218 tasks remaining
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🦁 RELEASING THE BEAST...
+┌─────────────────────────────────────────────────────────────┐
+│  1. BUILDER SUBAGENT                                        │
+│     → Does the work                                         │
+│     → Optimistic mindset                                    │
+│     → Returns: "Done! Created X, Y, Z"                      │
+├─────────────────────────────────────────────────────────────┤
+│  2. VERIFIER SUBAGENT (fresh context)                       │
+│     → Skeptical mindset                                     │
+│     → Checks: Files exist? Code compiles? Tests pass?       │
+│     → Returns: "VERIFIED" or "FAILED: [reasons]"            │
+├─────────────────────────────────────────────────────────────┤
+│  3. DECISION                                                │
+│     VERIFIED → Mark complete                                │
+│     FAILED   → Retry once with notes, then stuck            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Workers only get the **remaining** tasks in their queues!
+**Why?** Builders are optimistic about their work. Verifiers with fresh context catch mistakes builders miss.
+
+### Verification by Worker Type
+
+| Worker | Verifier Checks |
+|--------|-----------------|
+| Database | Files exist, SQL valid, RLS policies present |
+| Backend | Files exist, TypeScript compiles, imports valid |
+| Frontend | Files exist, compiles, uses real APIs |
+| Testing | Files exist, compiles, **tests actually run and pass** |
+
+---
+
+## Pipeline Architecture
+
+```
+╔════════════════════════════════════════════════════════════════════════╗
+║  6 TMUX SESSIONS                                                       ║
+║                                                                        ║
+║  ┌──────────────┐  ┌──────────────┐                                   ║
+║  │ ORCHESTRATOR │  │    ORACLE    │                                   ║
+║  │    (Opus)    │  │    (Opus)    │                                   ║
+║  └──────────────┘  └──────────────┘                                   ║
+║                                                                        ║
+║  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                  ║
+║  │ DATABASE │→│ BACKEND  │→│ FRONTEND │→│ TESTING  │                  ║
+║  │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │                  ║
+║  │          │ │waits DB  │ │waits API │ │waits UI  │                  ║
+║  └──────────┘ └──────────┘ └──────────┘ └──────────┘                  ║
+╚════════════════════════════════════════════════════════════════════════╝
+```
+
+---
 
 ## Commands
 
-### The Main Event
-
 | Command | Description |
 |---------|-------------|
-| `devfactory release-the-beast` | 🦁 Reconcile + create sessions + start everything |
-| `devfactory kill-beast` | 🔪 Terminate all DevFactory sessions |
-
-### Monitoring
-
-| Command | Description |
-|---------|-------------|
-| `devfactory status` | Show execution progress |
-| `devfactory dashboard` | Start web dashboard on :5555 |
-| `devfactory stuck` | Show blocked tasks |
-| `devfactory reconcile` | Run reconciliation standalone |
+| `devfactory release-the-beast` | 🦁 Reconcile + create sessions + start |
+| `devfactory kill-beast` | 🔪 Stop everything |
+| `devfactory status` | Show progress |
+| `devfactory dashboard` | Web UI on :5555 |
+| `devfactory reconcile` | Match codebase to specs |
 | `devfactory oracle` | Run Oracle manually |
-| `devfactory orchestrate` | Run orchestrator manually |
 
-### Options for release-the-beast
-
-| Option | Description |
-|--------|-------------|
-| `--verbose` | Show detailed output |
-| `--skip-reconcile` | Skip the reconciliation step |
-| `--skip-orchestrator` | Don't start orchestrator/oracle |
-| `--dry-run` | Show what would happen |
-| `--interval <seconds>` | Orchestrator check interval |
-
-## Tmux Sessions
-
-| Session | Role | Model |
-|---------|------|-------|
-| `df-orchestrator` | Reviews & merges code | Opus 4.5 |
-| `df-oracle` | Helps stuck workers | Opus 4.5 |
-| `df-database` | Migrations, schemas, RLS | Sonnet 4.5 |
-| `df-backend` | APIs, server actions | Sonnet 4.5 |
-| `df-frontend` | UI, pages, components | Sonnet 4.5 |
-| `df-testing` | E2E tests | Sonnet 4.5 |
-
-**Watch a session:**
-```bash
-tmux attach -t df-database
-# Ctrl+B, D to detach
-```
+---
 
 ## Workflow
 
-1. **Plan** with Claude Code: `/plan-product`
-2. **Shape** the spec: `/shape-spec`
-3. **Create** implementation spec: `/create-spec`
-4. **Release the beast**: `devfactory release-the-beast`
-5. **Watch** the dashboard and go touch grass 🌿
+1. **Plan**: `/plan-product`
+2. **Shape**: `/shape-spec`  
+3. **Create**: `/create-spec`
+4. **Release**: `devfactory release-the-beast`
+5. **Watch**: Dashboard + go touch grass 🌿
 
-**Interrupted?** Just run `release-the-beast` again - reconciliation handles it!
+**Interrupted?** Just run again - reconciliation picks up where you left off.
 
-## Requirements
+---
 
-- Node.js 18+
-- tmux
-- Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
-- Anthropic API key (for Orchestrator/Oracle/Reconciler)
+## Version History
 
-## License
+| Version | Features |
+|---------|----------|
+| 4.3 | Build → Verify → Complete pattern |
+| 4.2 | Reconciliation, dependency checking |
+| 4.1 | Oracle, subagent pattern, model tiers |
+| 4.0 | Local orchestration, tmux sessions |
 
-MIT
+---
+
+MIT License
