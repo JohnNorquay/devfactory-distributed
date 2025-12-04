@@ -17,8 +17,8 @@ const program = new Command();
 
 program
   .name('devfactory')
-  .description('DevFactory v4.1 - Autonomous parallel development with subagent architecture')
-  .version('4.1.0');
+  .description('DevFactory v4.2 - Autonomous parallel development with reconciliation')
+  .version('4.2.0');
 
 // ============================================================================
 // INITIALIZATION
@@ -38,6 +38,7 @@ program
   .command('release-the-beast')
   .description('🦁 Create all tmux sessions, start orchestrator, bootstrap workers - THE BIG ONE')
   .option('--skip-orchestrator', 'Skip starting the orchestrator (for manual control)')
+  .option('--skip-reconcile', 'Skip reconciling state with existing codebase')
   .option('--dry-run', 'Show what would happen without actually doing it')
   .option('-v, --verbose', 'Verbose output')
   .option('-i, --interval <seconds>', 'Orchestrator check interval in seconds', '30')
@@ -72,6 +73,15 @@ program
   .option('-p, --port <port>', 'Dashboard port', '5555')
   .option('-a, --app-url <url>', 'App preview URL', 'http://localhost:3000')
   .action(dashboardCommand);
+
+program
+  .command('reconcile')
+  .description('🔄 Reconcile state.json with existing codebase (runs automatically in release-the-beast)')
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (options) => {
+    const { reconcileState } = await import('./reconciler/reconciler');
+    await reconcileState(process.cwd(), options.verbose || false);
+  });
 
 // ============================================================================
 // STATUS & MONITORING
