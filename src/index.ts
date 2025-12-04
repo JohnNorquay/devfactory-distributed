@@ -17,7 +17,7 @@ const program = new Command();
 
 program
   .name('devfactory')
-  .description('DevFactory v4.3.1 - Auto-start workers without manual intervention')
+  .description('DevFactory v4.4.0 - Task-level parallel subagent execution')
   .version('4.3.1');
 
 // ============================================================================
