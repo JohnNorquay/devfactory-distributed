@@ -1,6 +1,6 @@
-# DevFactory v4.1 - Release The Beast 🦁
+# DevFactory v4.2 - Release The Beast 🦁
 
-Autonomous parallel development system with **local orchestration** and **The Oracle**.
+Autonomous parallel development system with **local orchestration**, **The Oracle**, and **brownfield reconciliation**.
 
 ---
 
@@ -40,12 +40,12 @@ npm link
 export ANTHROPIC_API_KEY=your-key
 
 # Verify
-devfactory --version  # Should show 4.1.0
+devfactory --version  # Should show 4.2.0
 ```
 
 ---
 
-## The Big Picture (v4.1)
+## The Big Picture (v4.2)
 
 ```
 ╔════════════════════════════════════════════════════════════════════════╗
@@ -71,16 +71,54 @@ devfactory --version  # Should show 4.1.0
 ╚════════════════════════════════════════════════════════════════════════╝
 ```
 
-## v4.1 Features
+## v4.2 Features
 
 | Feature | Description |
 |---------|-------------|
+| 🔄 **Reconciliation** | Pre-flight scans codebase, matches to specs, updates state.json |
+| 🏗️ **Brownfield Ready** | Recognizes existing code - only builds what's missing |
+| ⏸️ **Resumable** | Interrupted? Just run again - picks up where you left off |
 | 🔮 **The Oracle** | Opus-powered helper that auto-assists stuck workers |
 | 📊 **Model Tiers** | Workers use Sonnet (fast), Orchestrator/Oracle use Opus (smart) |
 | 🔄 **Subagent Pattern** | Workers spawn subagents per task - no context bloat |
 | 💓 **Heartbeats** | Workers report every 60s - detect dead sessions |
-| 📡 **Auto-polling** | Workers poll every 30s, never stop |
-| 📝 **State Updates** | Workers update state.json for live dashboard |
+
+## Pre-Flight Reconciliation (NEW in v4.2)
+
+When you run `release-the-beast`, it now:
+
+```
+🔍 Pre-flight checks...
+   ✓ DevFactory initialized
+   ✓ tmux available
+   ✓ claude CLI available
+   ✓ ANTHROPIC_API_KEY configured
+   ✓ No conflicting sessions
+
+🔄 Reconciling state with codebase...
+
+   Scanning existing files...
+   Found 30 relevant files
+   
+   Loading specs...
+   Found 8 specs
+   
+   Matching against specs (Opus)...
+   ├── Foundation           34/43 tasks (79%)
+   ├── Tax Debt Core        0/28 tasks (0%)
+   ├── Bank Integration     0/31 tasks (0%)
+   └── ...
+   
+   ✓ state.json updated
+   ✓ 34 tasks marked complete
+   ✓ 218 tasks remaining
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🦁 RELEASING THE BEAST...
+```
+
+Workers only get the **remaining** tasks in their queues!
 
 ## Commands
 
@@ -88,7 +126,7 @@ devfactory --version  # Should show 4.1.0
 
 | Command | Description |
 |---------|-------------|
-| `devfactory release-the-beast` | 🦁 Creates 6 tmux sessions, starts everything |
+| `devfactory release-the-beast` | 🦁 Reconcile + create sessions + start everything |
 | `devfactory kill-beast` | 🔪 Terminate all DevFactory sessions |
 
 ### Monitoring
@@ -98,61 +136,19 @@ devfactory --version  # Should show 4.1.0
 | `devfactory status` | Show execution progress |
 | `devfactory dashboard` | Start web dashboard on :5555 |
 | `devfactory stuck` | Show blocked tasks |
+| `devfactory reconcile` | Run reconciliation standalone |
 | `devfactory oracle` | Run Oracle manually |
 | `devfactory orchestrate` | Run orchestrator manually |
 
-### Setup
+### Options for release-the-beast
 
-| Command | Description |
-|---------|-------------|
-| `devfactory init --name "Project"` | Initialize in current project |
-| `devfactory bootstrap <session>` | Generate bootstrap prompt |
-
-## The 4-Stage Pipeline
-
-```
-TIME →  T1     T2     T3     T4     T5     T6     T7     T8
-───────────────────────────────────────────────────────────
-DB      [S1]   [S2]   [S3]   [S4]   [S5]   done    ·      ·
-Backend  ·     [S1]   [S2]   [S3]   [S4]   [S5]   done    ·
-Frontend ·      ·     [S1]   [S2]   [S3]   [S4]   [S5]   done
-Testing  ·      ·      ·     [S1]   [S2]   [S3]   [S4]   [S5]
-───────────────────────────────────────────────────────────
-                └─── ALL 4 WORKERS BUSY ───┘
-```
-
-After the pipeline fills (T4), all 4 workers run at ~95% utilization!
-
-## Oracle Flow (v4.1)
-
-```
-Worker gets stuck
-      ↓
-Sets status: "stuck" in state.json
-      ↓
-Oracle detects (every 60s)
-      ↓
-Oracle consults Opus for guidance
-      ↓
-Writes .devfactory/oracle/guidance-{task}.md
-      ↓
-Worker reads guidance and continues
-      ↓
-Only escalates to human if Oracle says so
-```
-
-## Subagent Architecture (v4.1)
-
-Workers don't do tasks directly - they spawn subagents:
-
-```
-Worker (lean orchestrator loop)
-   │
-   ├── Spawn subagent → Task 1 → Complete → Context freed
-   ├── Spawn subagent → Task 2 → Complete → Context freed  
-   ├── Spawn subagent → Task 3 → Complete → Context freed
-   └── ... can run forever without context bloat
-```
+| Option | Description |
+|--------|-------------|
+| `--verbose` | Show detailed output |
+| `--skip-reconcile` | Skip the reconciliation step |
+| `--skip-orchestrator` | Don't start orchestrator/oracle |
+| `--dry-run` | Show what would happen |
+| `--interval <seconds>` | Orchestrator check interval |
 
 ## Tmux Sessions
 
@@ -179,12 +175,14 @@ tmux attach -t df-database
 4. **Release the beast**: `devfactory release-the-beast`
 5. **Watch** the dashboard and go touch grass 🌿
 
+**Interrupted?** Just run `release-the-beast` again - reconciliation handles it!
+
 ## Requirements
 
 - Node.js 18+
 - tmux
 - Claude Code CLI (`npm install -g @anthropic-ai/claude-code`)
-- Anthropic API key (for Orchestrator/Oracle)
+- Anthropic API key (for Orchestrator/Oracle/Reconciler)
 
 ## License
 
