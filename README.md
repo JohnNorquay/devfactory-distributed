@@ -1,10 +1,10 @@
-# DevFactory v4.3 - Release The Beast 🦁
+# DevFactory v4.4 - Release The Beast 🦁
 
-Autonomous parallel development with **Build → Verify → Complete** pattern.
+Autonomous parallel development with **task-level parallel subagent execution**.
 
 ---
 
-## 🚀 Quick Start (Remote Beast Machine)
+## 🚀 Quick Start
 
 ```bash
 # SSH to beast machine
@@ -16,12 +16,10 @@ cd ~/projects/mycpa
 devfactory release-the-beast --verbose
 ```
 
-**From your workstation, tunnel the dashboard:**
+**Dashboard tunnel:**
 ```bash
 ssh -L 5555:localhost:5555 beastmode@192.168.1.22 -t wsl
 ```
-
-Then open: http://localhost:5555
 
 ---
 
@@ -34,57 +32,75 @@ cd devfactory-distributed
 npm install && npm run build && npm link
 
 export ANTHROPIC_API_KEY=your-key
-devfactory --version  # Should show 4.3.0
+devfactory --version  # Should show 4.4.0
 ```
 
 ---
 
-## v4.3 Features
+## v4.4: Task-Level Parallel Subagents 🚀
 
-| Feature | Description |
-|---------|-------------|
-| ✅ **Build → Verify → Complete** | Every task verified by skeptical second subagent |
-| 🔄 **Reconciliation** | Pre-flight scans codebase, matches to specs |
-| 🏗️ **Brownfield Ready** | Recognizes existing code |
-| 🔗 **Dependency Checking** | Workers wait for upstream stages per-spec |
-| 🔮 **The Oracle** | Opus helps stuck workers automatically |
-| 📊 **Model Tiers** | Workers=Sonnet, Orchestrator/Oracle=Opus |
-| 🔄 **Subagent Pattern** | No context bloat |
+**Before (v4.3):** Tasks within a group ran sequentially
+```
+Task 1.1 → Task 1.2 → Task 1.3 → Task 1.4
+(20 min total)
+```
+
+**After (v4.4):** Independent tasks run in parallel!
+```
+Task 1.1 (tests)
+    ├──→ Task 1.2 (model)     ─┬──→ Task 1.4 (associations)
+    └──→ Task 1.3 (migration) ─┘
+         [PARALLEL!]
+(12 min total - 40% faster!)
+```
+
+### How It Works
+
+1. **task-list-creator** now outputs `depends_on` for each task:
+```markdown
+- [ ] 1.2 Create User model
+  - **depends_on**: ["1.1"]
+- [ ] 1.3 Create migration
+  - **depends_on**: ["1.1"]
+```
+
+2. **Workers detect parallelism** and spawn multiple subagents:
+```
+Worker sees: 1.2 and 1.3 both only need 1.1 (done!)
+Worker spawns: 2 parallel builder subagents
+Worker waits: for both to complete
+Worker verifies: both results
+Worker marks: both complete
+```
+
+3. **Time savings compound** across the pipeline:
+   - Database: 2-3 parallel migrations
+   - Backend: 3-4 parallel API endpoints
+   - Frontend: 4-5 parallel components
+   - Testing: 3-4 parallel test suites
 
 ---
 
-## Build → Verify → Complete (NEW in v4.3)
+## Two Levels of Parallelism
 
-Every task goes through **TWO subagents**:
+| Level | What | How |
+|-------|------|-----|
+| **Group** | Database + Backend workers run simultaneously | `parallel_groups` in orchestration.yml |
+| **Task** | Multiple tasks within a worker run simultaneously | `depends_on` in tasks.md |
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. BUILDER SUBAGENT                                        │
-│     → Does the work                                         │
-│     → Optimistic mindset                                    │
-│     → Returns: "Done! Created X, Y, Z"                      │
-├─────────────────────────────────────────────────────────────┤
-│  2. VERIFIER SUBAGENT (fresh context)                       │
-│     → Skeptical mindset                                     │
-│     → Checks: Files exist? Code compiles? Tests pass?       │
-│     → Returns: "VERIFIED" or "FAILED: [reasons]"            │
-├─────────────────────────────────────────────────────────────┤
-│  3. DECISION                                                │
-│     VERIFIED → Mark complete                                │
-│     FAILED   → Retry once with notes, then stuck            │
-└─────────────────────────────────────────────────────────────┘
-```
+---
 
-**Why?** Builders are optimistic about their work. Verifiers with fresh context catch mistakes builders miss.
+## All Features (v4.0 → v4.4)
 
-### Verification by Worker Type
-
-| Worker | Verifier Checks |
-|--------|-----------------|
-| Database | Files exist, SQL valid, RLS policies present |
-| Backend | Files exist, TypeScript compiles, imports valid |
-| Frontend | Files exist, compiles, uses real APIs |
-| Testing | Files exist, compiles, **tests actually run and pass** |
+| Version | Feature |
+|---------|---------|
+| 4.4 | 🚀 Task-level parallel subagents |
+| 4.3.1 | Auto-start workers (no manual enter) |
+| 4.3 | Build → Verify → Complete |
+| 4.2.1 | Dependency checking (UI waits for API) |
+| 4.2 | Reconciliation (brownfield ready) |
+| 4.1 | Oracle + subagent pattern |
+| 4.0 | Local orchestration |
 
 ---
 
@@ -99,13 +115,34 @@ Every task goes through **TWO subagents**:
 ║  │    (Opus)    │  │    (Opus)    │                                   ║
 ║  └──────────────┘  └──────────────┘                                   ║
 ║                                                                        ║
-║  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                  ║
-║  │ DATABASE │→│ BACKEND  │→│ FRONTEND │→│ TESTING  │                  ║
-║  │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │ │ (Sonnet) │                  ║
-║  │          │ │waits DB  │ │waits API │ │waits UI  │                  ║
-║  └──────────┘ └──────────┘ └──────────┘ └──────────┘                  ║
+║  ┌──────────────────────────────────────────────────────────────────┐ ║
+║  │ DATABASE WORKER                                                   │ ║
+║  │ ├── Spawn parallel: Task 1.2, 1.3, 1.4                           │ ║
+║  │ ├── Wait for all                                                  │ ║
+║  │ └── Verify all → Complete all                                     │ ║
+║  └──────────────────────────────────────────────────────────────────┘ ║
+║                              ↓                                         ║
+║  ┌──────────────────────────────────────────────────────────────────┐ ║
+║  │ BACKEND WORKER (parallel tasks within)                           │ ║
+║  └──────────────────────────────────────────────────────────────────┘ ║
+║                              ↓                                         ║
+║  ┌──────────────────────────────────────────────────────────────────┐ ║
+║  │ FRONTEND WORKER (parallel tasks within)                          │ ║
+║  └──────────────────────────────────────────────────────────────────┘ ║
+║                              ↓                                         ║
+║  ┌──────────────────────────────────────────────────────────────────┐ ║
+║  │ TESTING WORKER (parallel tasks within)                           │ ║
+║  └──────────────────────────────────────────────────────────────────┘ ║
 ╚════════════════════════════════════════════════════════════════════════╝
 ```
+
+---
+
+## Required: Update task-list-creator
+
+To enable v4.4 parallelism, update your `~/.claude/plugins/devFactory/agents/task-list-creator.md` to output `depends_on` for each task.
+
+See: `/mnt/user-data/outputs/devfactory-v4.4/task-list-creator.md`
 
 ---
 
@@ -113,35 +150,29 @@ Every task goes through **TWO subagents**:
 
 | Command | Description |
 |---------|-------------|
-| `devfactory release-the-beast` | 🦁 Reconcile + create sessions + start |
-| `devfactory kill-beast` | 🔪 Stop everything |
+| `devfactory release-the-beast` | 🦁 Reconcile + start everything |
+| `devfactory kill-beast` | 🔪 Stop all sessions |
 | `devfactory status` | Show progress |
-| `devfactory dashboard` | Web UI on :5555 |
+| `devfactory dashboard` | Web UI |
 | `devfactory reconcile` | Match codebase to specs |
-| `devfactory oracle` | Run Oracle manually |
 
 ---
 
-## Workflow
+## Update Both Machines
 
-1. **Plan**: `/plan-product`
-2. **Shape**: `/shape-spec`  
-3. **Create**: `/create-spec`
-4. **Release**: `devfactory release-the-beast`
-5. **Watch**: Dashboard + go touch grass 🌿
+```bash
+# Dev laptop
+cd ~/.claude/plugins/devfactory-distributed
+git pull && npm run build
+devfactory --version  # 4.4.0
 
-**Interrupted?** Just run again - reconciliation picks up where you left off.
-
----
-
-## Version History
-
-| Version | Features |
-|---------|----------|
-| 4.3 | Build → Verify → Complete pattern |
-| 4.2 | Reconciliation, dependency checking |
-| 4.1 | Oracle, subagent pattern, model tiers |
-| 4.0 | Local orchestration, tmux sessions |
+# Beast machine
+ssh beastmode@192.168.1.22
+wsl
+cd ~/.claude/plugins/devfactory-distributed
+git pull && npm run build
+devfactory --version  # 4.4.0
+```
 
 ---
 
