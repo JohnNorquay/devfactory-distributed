@@ -18,7 +18,7 @@ const program = new Command();
 program
   .name('devfactory')
   .description('DevFactory v4.4.0 - Task-level parallel subagent execution')
-  .version('4.3.1');
+  .version('4.4.0');
 
 // ============================================================================
 // INITIALIZATION
