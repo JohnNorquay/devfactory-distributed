@@ -1,6 +1,6 @@
 {
   "name": "devfactory-distributed",
-  "version": "4.3.1",
+  "version": "4.4.0",
   "description": "DevFactory v4.3.1 - Auto-start workers without manual intervention",
   "main": "dist/index.js",
   "bin": {
