@@ -1,7 +1,7 @@
 {
   "name": "devfactory-distributed",
-  "version": "4.3.0",
-  "description": "DevFactory v4.3 - Build → Verify → Complete pattern",
+  "version": "4.3.1",
+  "description": "DevFactory v4.3.1 - Auto-start workers without manual intervention",
   "main": "dist/index.js",
   "bin": {
     "devfactory": "./dist/index.js"
