@@ -17,8 +17,8 @@ const program = new Command();
 
 program
   .name('devfactory')
-  .description('DevFactory v4.3 - Build → Verify → Complete pattern')
-  .version('4.3.0');
+  .description('DevFactory v4.3.1 - Auto-start workers without manual intervention')
+  .version('4.3.1');
 
 // ============================================================================
 // INITIALIZATION
