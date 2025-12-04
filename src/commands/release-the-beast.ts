@@ -16,9 +16,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync, spawn, ChildProcess } from 'child_process';
+import { reconcileState } from '../reconciler/reconciler';
 
 interface ReleaseOptions {
   skipOrchestrator?: boolean;
+  skipReconcile?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
   interval?: string;
@@ -48,7 +50,7 @@ const BANNER = `
 ║     ██████╔╝███████╗██║  ██║███████║   ██║       ██╗██╗██╗          ║
 ║     ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝       ╚═╝╚═╝╚═╝          ║
 ║                                                                      ║
-║              DevFactory v4.1 - Subagent Architecture                 ║
+║              DevFactory v4.2 - Brownfield Ready                  ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 `;
@@ -152,6 +154,22 @@ export async function releaseTheBeastCommand(options: ReleaseOptions) {
     }
     console.log('\n   Run without --dry-run to actually start.\n');
     return;
+  }
+  
+  // ========== RECONCILIATION (v4.2) ==========
+  
+  if (!options.skipReconcile) {
+    const reconcileResult = await reconcileState(cwd, options.verbose || false);
+    
+    if (reconcileResult.updatedState && reconcileResult.completedTasks > 0) {
+      console.log('━'.repeat(70));
+      console.log(`   📊 Reconciliation complete: ${reconcileResult.completedTasks}/${reconcileResult.totalTasks} tasks already done`);
+      console.log(`   📋 ${reconcileResult.remainingTasks} tasks will be distributed to workers`);
+      console.log('━'.repeat(70));
+      console.log('');
+    }
+  } else {
+    console.log('   ⏭️  Skipping reconciliation (--skip-reconcile)\n');
   }
   
   // ========== THE BEAST IS RELEASED ==========
