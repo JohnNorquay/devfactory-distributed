@@ -17,8 +17,8 @@ const program = new Command();
 
 program
   .name('devfactory')
-  .description('DevFactory v4.2.1 - Autonomous parallel development with dependency coordination')
-  .version('4.2.1');
+  .description('DevFactory v4.3 - Build → Verify → Complete pattern')
+  .version('4.3.0');
 
 // ============================================================================
 // INITIALIZATION
