@@ -1,12 +1,4 @@
-/**
- * ORCHESTRATE COMMAND
- * 
- * Runs the local orchestrator as a standalone process.
- * This is what runs in the df-orchestrator tmux session.
- */
-
-import * as path from 'path';
-import { runOrchestrator } from '../orchestrator';
+import { ActiveOrchestrator } from '../orchestrator';
 
 interface OrchestrateOptions {
   interval?: string;
@@ -19,13 +11,17 @@ export async function orchestrateCommand(options: OrchestrateOptions) {
   
   console.log('');
   console.log('╔════════════════════════════════════════════════╗');
-  console.log('║       LOCAL ORCHESTRATOR - DevFactory v4.0     ║');
+  console.log('║       LOCAL ORCHESTRATOR - DevFactory v4.5     ║');
   console.log('╚════════════════════════════════════════════════╝');
   console.log('');
-  
-  await runOrchestrator(cwd, {
-    interval: parseInt(options.interval || '30'),
+
+  const orchestrator = new ActiveOrchestrator({
+    projectRoot: cwd,
+    pollInterval: parseInt(options.interval || '30') * 1000,
+    workerTimeout: 600000,
+    maxRetries: 3,
     verbose: options.verbose || false,
-    noBackup: options.noBackup || false,
   });
+
+  await orchestrator.start();
 }

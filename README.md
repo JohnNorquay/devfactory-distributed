@@ -1,179 +1,220 @@
-# DevFactory v4.4 - Release The Beast 🦁
+# DevFactory Distributed v4.5
 
-Autonomous parallel development with **task-level parallel subagent execution**.
+## 🦁 Beast Mode with Active Orchestration
 
----
+**The key difference:** The orchestrator no longer goes golfing! 🏌️❌
 
-## 🚀 Quick Start
+### What's New in v4.5
 
-```bash
-# SSH to beast machine
-ssh beastmode@192.168.1.22
-wsl
-cd ~/projects/mycpa
+| Feature | v4.4 | v4.5 |
+|---------|------|------|
+| Orchestrator | Spawn workers and check email | **Active polling every 30s** |
+| Task Assignment | Workers self-serve | **Orchestrator pushes tasks** |
+| Verification | Optional/inconsistent | **Build → Verify → Complete enforced** |
+| Subagents | Sometimes used | **Always required for implementation** |
+| Checkboxes | Often skipped | **No checkbox without verification** |
+| Stuck Detection | Manual | **Automatic with nudges** |
+| Dashboard | Stale data | **Real-time WebSocket updates** |
+| File Locking | Race conditions | **Proper locking on state.json** |
 
-# Release the beast!
-devfactory release-the-beast --verbose
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    ACTIVE ORCHESTRATOR (No Golfing!)                │
+│                                                                      │
+│   Polls every 30 seconds:                                           │
+│   • Assigns tasks to idle workers                                   │
+│   • Monitors worker health                                          │
+│   • Detects and nudges stuck workers                               │
+│   • Updates queues as dependencies unlock                          │
+│                                                                      │
+│         ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
+│         │df-database│  │df-backend│  │df-frontend│ │df-testing│     │
+│         │          │  │          │  │          │  │          │     │
+│         │ Spawns   │  │ Spawns   │  │ Spawns   │  │ Spawns   │     │
+│         │ Subagents│  │ Subagents│  │ Subagents│  │ Subagents│     │
+│         │ Verifies │  │ Verifies │  │ Verifies │  │ Verifies │     │
+│         └──────────┘  └──────────┘  └──────────┘  └──────────┘     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Dashboard tunnel:**
-```bash
-ssh -L 5555:localhost:5555 beastmode@192.168.1.22 -t wsl
+## The Build → Verify → Complete Cycle
+
+Every task MUST go through this cycle:
+
+```
+┌─────────────────────────────────────────┐
+│           PHASE 1: BUILD                │
+│                                         │
+│  1. Receive task from orchestrator      │
+│  2. Update state: "in_progress"         │
+│  3. Spawn subagent to implement         │
+│  4. Wait for completion                 │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│          PHASE 2: VERIFY                │
+│                                         │
+│  1. Update state: "verifying"           │
+│  2. Run layer-specific checks           │
+│  3. Retry if failed (max 2x)            │
+│  4. Mark stuck if still failing         │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│         PHASE 3: COMPLETE               │
+│                                         │
+│  1. Mark checkbox in tasks.md           │
+│  2. Update state: "complete"            │
+│  3. Report files changed                │
+│  4. Wait for next assignment            │
+└─────────────────────────────────────────┘
 ```
 
----
-
-## 📦 Installation
+## Installation
 
 ```bash
+# Clone to your plugins directory
 cd ~/.claude/plugins
 git clone https://github.com/JohnNorquay/devfactory-distributed.git
 cd devfactory-distributed
-npm install && npm run build && npm link
+git checkout v4.5
 
-export ANTHROPIC_API_KEY=your-key
-devfactory --version  # Should show 4.4.0
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Link globally
+npm link
 ```
 
----
+## Usage
 
-## v4.4: Task-Level Parallel Subagents 🚀
-
-**Before (v4.3):** Tasks within a group ran sequentially
-```
-Task 1.1 → Task 1.2 → Task 1.3 → Task 1.4
-(20 min total)
-```
-
-**After (v4.4):** Independent tasks run in parallel!
-```
-Task 1.1 (tests)
-    ├──→ Task 1.2 (model)     ─┬──→ Task 1.4 (associations)
-    └──→ Task 1.3 (migration) ─┘
-         [PARALLEL!]
-(12 min total - 40% faster!)
-```
-
-### How It Works
-
-1. **task-list-creator** now outputs `depends_on` for each task:
-```markdown
-- [ ] 1.2 Create User model
-  - **depends_on**: ["1.1"]
-- [ ] 1.3 Create migration
-  - **depends_on**: ["1.1"]
-```
-
-2. **Workers detect parallelism** and spawn multiple subagents:
-```
-Worker sees: 1.2 and 1.3 both only need 1.1 (done!)
-Worker spawns: 2 parallel builder subagents
-Worker waits: for both to complete
-Worker verifies: both results
-Worker marks: both complete
-```
-
-3. **Time savings compound** across the pipeline:
-   - Database: 2-3 parallel migrations
-   - Backend: 3-4 parallel API endpoints
-   - Frontend: 4-5 parallel components
-   - Testing: 3-4 parallel test suites
-
----
-
-## Two Levels of Parallelism
-
-| Level | What | How |
-|-------|------|-----|
-| **Group** | Database + Backend workers run simultaneously | `parallel_groups` in orchestration.yml |
-| **Task** | Multiple tasks within a worker run simultaneously | `depends_on` in tasks.md |
-
----
-
-## All Features (v4.0 → v4.4)
-
-| Version | Feature |
-|---------|---------|
-| 4.4 | 🚀 Task-level parallel subagents |
-| 4.3.1 | Auto-start workers (no manual enter) |
-| 4.3 | Build → Verify → Complete |
-| 4.2.1 | Dependency checking (UI waits for API) |
-| 4.2 | Reconciliation (brownfield ready) |
-| 4.1 | Oracle + subagent pattern |
-| 4.0 | Local orchestration |
-
----
-
-## Pipeline Architecture
-
-```
-╔════════════════════════════════════════════════════════════════════════╗
-║  6 TMUX SESSIONS                                                       ║
-║                                                                        ║
-║  ┌──────────────┐  ┌──────────────┐                                   ║
-║  │ ORCHESTRATOR │  │    ORACLE    │                                   ║
-║  │    (Opus)    │  │    (Opus)    │                                   ║
-║  └──────────────┘  └──────────────┘                                   ║
-║                                                                        ║
-║  ┌──────────────────────────────────────────────────────────────────┐ ║
-║  │ DATABASE WORKER                                                   │ ║
-║  │ ├── Spawn parallel: Task 1.2, 1.3, 1.4                           │ ║
-║  │ ├── Wait for all                                                  │ ║
-║  │ └── Verify all → Complete all                                     │ ║
-║  └──────────────────────────────────────────────────────────────────┘ ║
-║                              ↓                                         ║
-║  ┌──────────────────────────────────────────────────────────────────┐ ║
-║  │ BACKEND WORKER (parallel tasks within)                           │ ║
-║  └──────────────────────────────────────────────────────────────────┘ ║
-║                              ↓                                         ║
-║  ┌──────────────────────────────────────────────────────────────────┐ ║
-║  │ FRONTEND WORKER (parallel tasks within)                          │ ║
-║  └──────────────────────────────────────────────────────────────────┘ ║
-║                              ↓                                         ║
-║  ┌──────────────────────────────────────────────────────────────────┐ ║
-║  │ TESTING WORKER (parallel tasks within)                           │ ║
-║  └──────────────────────────────────────────────────────────────────┘ ║
-╚════════════════════════════════════════════════════════════════════════╝
-```
-
----
-
-## Required: Update task-list-creator
-
-To enable v4.4 parallelism, update your `~/.claude/plugins/devFactory/agents/task-list-creator.md` to output `depends_on` for each task.
-
-See: `/mnt/user-data/outputs/devfactory-v4.4/task-list-creator.md`
-
----
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `devfactory release-the-beast` | 🦁 Reconcile + start everything |
-| `devfactory kill-beast` | 🔪 Stop all sessions |
-| `devfactory status` | Show progress |
-| `devfactory dashboard` | Web UI |
-| `devfactory reconcile` | Match codebase to specs |
-
----
-
-## Update Both Machines
+### Initialize a Project
 
 ```bash
-# Dev laptop
-cd ~/.claude/plugins/devfactory-distributed
-git pull && npm run build
-devfactory --version  # 4.4.0
-
-# Beast machine
-ssh beastmode@192.168.1.22
-wsl
-cd ~/.claude/plugins/devfactory-distributed
-git pull && npm run build
-devfactory --version  # 4.4.0
+cd ~/projects/my-project
+devfactory init --name "My Project"
 ```
 
----
+### Release the Beast
 
-MIT License
+```bash
+# Make sure you have specs in .devfactory/specs/
+devfactory release-the-beast --verbose
+```
+
+### Monitor Progress
+
+```bash
+# Terminal-based status
+devfactory status
+
+# Real-time watch mode
+devfactory watch
+
+# Web dashboard
+devfactory dashboard
+# Open http://localhost:5555
+```
+
+### Other Commands
+
+```bash
+# Show stuck tasks
+devfactory stuck
+
+# Pause orchestrator
+devfactory pause
+
+# Resume orchestrator
+devfactory resume
+```
+
+## Worker Rules
+
+Workers are **coordinators**, not implementers:
+
+1. **Never implement code directly** - Always spawn subagents
+2. **Never skip verification** - Build → Verify → Complete
+3. **Always update state.json** - The orchestrator is watching
+4. **Respond to orchestrator** - Don't ignore check-ins
+
+## State Management
+
+State is stored in `.devfactory/beast/state.json` with proper file locking:
+
+```json
+{
+  "version": "4.5.0",
+  "status": "running",
+  "orchestrator": {
+    "status": "active",
+    "lastPoll": "2024-01-15T10:30:00Z",
+    "totalPolls": 42
+  },
+  "workers": {
+    "df-database": {
+      "status": "working",
+      "currentTask": "spec1-3"
+    }
+  },
+  "tasks": {
+    "spec1-3": {
+      "status": "in_progress",
+      "layer": "database"
+    }
+  },
+  "queues": {
+    "database": [],
+    "backend": ["spec1-5", "spec1-6"],
+    "frontend": [],
+    "testing": []
+  },
+  "activity": [
+    {
+      "timestamp": "2024-01-15T10:30:00Z",
+      "type": "task_completed",
+      "message": "Task completed"
+    }
+  ]
+}
+```
+
+## Troubleshooting
+
+### Worker not receiving tasks
+1. Check if orchestrator is active: `devfactory status`
+2. Check queue has tasks: Look at state.json queues
+3. Verify tmux session exists: `tmux list-sessions`
+
+### Tasks stuck
+1. Run `devfactory stuck` to see reasons
+2. Check worker session: `tmux attach -t df-<layer>`
+3. Look at state.json for stuck_reason
+
+### Dashboard not updating
+1. Ensure state.json exists
+2. Check WebSocket connection in browser console
+3. Restart dashboard: `devfactory dashboard`
+
+## Version History
+
+- **v4.5.0** - Active orchestration, enforced Build→Verify→Complete
+- **v4.4.0** - Parallel subagent batching
+- **v4.3.1** - Oracle system for stuck workers
+- **v4.0.0** - Initial beast mode
+- **v3.x** - Interactive orchestration (you + Claude)
+
+## Philosophy
+
+> "Between mine and your consciousness filtering methods, we are going to make something great!" - Johnny5
+
+DevFactory v4.5 combines the **magic of active orchestration** from v3 with the **parallelism of beast mode**. The orchestrator stays engaged, workers stay accountable, and together we build amazing things.
+
+🦁 No golfing. No shortcuts. Just shipping code.
